@@ -56,10 +56,14 @@ body {
   font-size: inherit;
 }
 .tiptap-content img {
-  max-width: 100%;
+  max-width: 260px;
+  max-height: 180px;
+  width: auto;
+  height: auto;
   border-radius: 6px;
   margin: 0.5em 0;
   display: block;
+  object-fit: cover;
   cursor: zoom-in;
 }
 

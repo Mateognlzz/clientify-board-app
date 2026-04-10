@@ -3,6 +3,7 @@ import { LayoutList, Kanban, Users, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getProject } from '@/services/projects.service'
 import { ProjectNav } from '@/components/layout/ProjectNav'
+import { ProjectLayoutShell } from './ProjectLayoutShell'
 
 interface ProjectLayoutProps {
   children: React.ReactNode
@@ -26,27 +27,26 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     { href: `/project/${projectId}/members`, label: 'Members', icon: <Users size={14} /> },
   ]
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Project header */}
-      <div className="border-b border-gray-200 bg-white px-6 pt-4 pb-0">
-        <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-lg font-semibold text-gray-900">{project.name}</h1>
-          <span className="text-xs font-mono font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-            {project.key}
+  const header = (
+    <div className="border-b border-gray-200 bg-white px-6 pt-4 pb-0">
+      <div className="flex items-center gap-2 mb-3">
+        <h1 className="text-lg font-semibold text-gray-900">{project.name}</h1>
+        <span className="text-xs font-mono font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+          {project.key}
+        </span>
+        {project.description && (
+          <span className="text-sm text-gray-400 ml-1 hidden sm:block truncate max-w-xs">
+            — {project.description}
           </span>
-          {project.description && (
-            <span className="text-sm text-gray-400 ml-1 hidden sm:block truncate max-w-xs">
-              — {project.description}
-            </span>
-          )}
-        </div>
-        <ProjectNav items={navItems} />
+        )}
       </div>
-
-      <div className="flex-1 overflow-auto">
-        {children}
-      </div>
+      <ProjectNav items={navItems} />
     </div>
+  )
+
+  return (
+    <ProjectLayoutShell header={header}>
+      {children}
+    </ProjectLayoutShell>
   )
 }

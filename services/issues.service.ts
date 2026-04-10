@@ -69,6 +69,47 @@ export async function getIssues(
   return { data: issues, error: null }
 }
 
+export async function getIssueById(
+  supabase: Client,
+  issueId: string
+): Promise<ServiceResult<IssueWithDetails>> {
+  const { data, error } = await supabase
+    .from('issues')
+    .select(`
+      *,
+      assignee:profiles!issues_assignee_id_fkey(id, full_name, avatar_url),
+      reporter:profiles!issues_reporter_id_fkey(id, full_name, avatar_url)
+    `)
+    .eq('id', issueId)
+    .single()
+
+  if (error) return { data: null, error: 'Ticket not found.' }
+
+  const row = data as unknown as RawIssue
+  return {
+    data: {
+      id: row.id,
+      project_id: row.project_id,
+      key: row.key,
+      title: row.title,
+      description: row.description,
+      status: row.status as Issue['status'],
+      priority: row.priority as Issue['priority'],
+      type: row.type as Issue['type'],
+      assignee_id: row.assignee_id,
+      reporter_id: row.reporter_id,
+      position: row.position,
+      due_date: row.due_date,
+      sprint_id: row.sprint_id,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      assignee: row.assignee,
+      reporter: row.reporter ?? { id: row.reporter_id, full_name: null, avatar_url: null },
+    },
+    error: null,
+  }
+}
+
 export async function createIssue(
   supabase: Client,
   userId: string,

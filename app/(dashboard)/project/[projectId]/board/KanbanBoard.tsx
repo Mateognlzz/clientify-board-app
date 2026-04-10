@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   DndContext,
@@ -30,6 +30,8 @@ import type { IssueWithDetails, IssueStatus, IssueUpdate } from '@/types/issue.t
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import { updateIssueAction, deleteIssueAction } from '../actions'
+import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
+import { formatDate } from '@/lib/utils/dates'
 
 interface KanbanBoardProps {
   projectId: string
@@ -42,10 +44,14 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, sprints, members }: KanbanBoardProps) {
   const router = useRouter()
   const { toast } = useToast()
+  useRefreshOnFocus(() => setDetailTarget(null))
 
   const activeSprint = sprints.find((s) => s.status === 'active') ?? null
 
   const [issues, setIssues] = useState<IssueWithDetails[]>(initialIssues)
+
+  // Sync when server re-fetches after router.refresh()
+  useEffect(() => { setIssues(initialIssues) }, [initialIssues])
   const [activeIssue, setActiveIssue] = useState<IssueWithDetails | null>(null)
   const [detailTarget, setDetailTarget] = useState<IssueWithDetails | null>(null)
   const [editTarget, setEditTarget] = useState<IssueWithDetails | null>(null)
@@ -134,9 +140,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
             <span className="font-semibold text-sm text-gray-800">{activeSprint.name}</span>
             {activeSprint.start_date && activeSprint.end_date && (
               <span className="text-xs text-gray-400">
-                {new Date(activeSprint.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                {' – '}
-                {new Date(activeSprint.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {formatDate(activeSprint.start_date)} – {formatDate(activeSprint.end_date)}
               </span>
             )}
             {totalCount > 0 && (
@@ -174,7 +178,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
       </DndContext>
 
       {/* Ticket detail modal */}
-      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="xl">
+      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
         {detailTarget && (
           <IssueDetail
             issue={detailTarget}

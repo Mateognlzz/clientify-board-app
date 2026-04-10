@@ -23,6 +23,7 @@ import { TypeIcon } from '@/components/issues/TypeIcon'
 import { useToast } from '@/providers/ToastProvider'
 import { cn } from '@/lib/utils/cn'
 import { formatDate } from '@/lib/utils/dates'
+import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
 import type { IssueWithDetails, IssueCreate, IssueUpdate } from '@/types/issue.types'
 import type { Sprint, SprintCreate, SprintUpdate } from '@/types/sprint.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
@@ -43,9 +44,14 @@ interface Props {
 export function BacklogClient({ projectId, currentUserId, issues, sprints: initialSprints, members }: Props) {
   const router = useRouter()
   const { toast } = useToast()
+  useRefreshOnFocus(() => setDetailTarget(null))
 
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints)
   const [allIssues, setAllIssues] = useState<IssueWithDetails[]>(issues)
+
+  // Sync when server re-fetches after router.refresh()
+  useEffect(() => { setSprints(initialSprints) }, [initialSprints])
+  useEffect(() => { setAllIssues(issues) }, [issues])
   const [draggingIssue, setDraggingIssue] = useState<IssueWithDetails | null>(null)
 
   // Sprint modals
@@ -386,7 +392,7 @@ export function BacklogClient({ projectId, currentUserId, issues, sprints: initi
           />
         </Modal>
 
-        <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="xl">
+        <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
           {detailTarget && (
             <IssueDetail
               issue={detailTarget}

@@ -15,6 +15,7 @@ import { TypeIcon, ALL_TYPES, typeLabel } from '@/components/issues/TypeIcon'
 import { useToast } from '@/providers/ToastProvider'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, isOverdue } from '@/lib/utils/dates'
+import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
 import type { IssueWithDetails, IssueCreate, IssueUpdate, IssueStatus, IssuePriority, IssueType } from '@/types/issue.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
@@ -45,6 +46,7 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  useRefreshOnFocus(() => setDetailTarget(null))
 
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<ActiveFilters>(initialFilters)
@@ -345,7 +347,7 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
       )}
 
       {/* Modal: ticket detail */}
-      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="xl">
+      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
         {detailTarget && (
           <IssueDetail
             issue={detailTarget}
