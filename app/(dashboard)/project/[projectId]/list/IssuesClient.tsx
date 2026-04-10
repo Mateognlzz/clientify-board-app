@@ -16,6 +16,7 @@ import { useToast } from '@/providers/ToastProvider'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, isOverdue } from '@/lib/utils/dates'
 import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
+import { useRealtimeRefresh } from '@/lib/hooks/useRealtimeRefresh'
 import type { IssueWithDetails, IssueCreate, IssueUpdate, IssueStatus, IssuePriority, IssueType } from '@/types/issue.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
@@ -47,6 +48,7 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
   const searchParams = useSearchParams()
   const { toast } = useToast()
   useRefreshOnFocus(() => setDetailTarget(null))
+  useRealtimeRefresh(projectId)
 
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<ActiveFilters>(initialFilters)

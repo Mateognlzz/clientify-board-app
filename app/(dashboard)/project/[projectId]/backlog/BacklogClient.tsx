@@ -24,6 +24,7 @@ import { useToast } from '@/providers/ToastProvider'
 import { cn } from '@/lib/utils/cn'
 import { formatDate } from '@/lib/utils/dates'
 import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
+import { useRealtimeRefresh } from '@/lib/hooks/useRealtimeRefresh'
 import type { IssueWithDetails, IssueCreate, IssueUpdate } from '@/types/issue.types'
 import type { Sprint, SprintCreate, SprintUpdate } from '@/types/sprint.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
@@ -45,6 +46,7 @@ export function BacklogClient({ projectId, currentUserId, issues, sprints: initi
   const router = useRouter()
   const { toast } = useToast()
   useRefreshOnFocus(() => setDetailTarget(null))
+  useRealtimeRefresh(projectId)
 
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints)
   const [allIssues, setAllIssues] = useState<IssueWithDetails[]>(issues)

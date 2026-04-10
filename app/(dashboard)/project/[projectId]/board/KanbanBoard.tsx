@@ -31,6 +31,7 @@ import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import { updateIssueAction, deleteIssueAction } from '../actions'
 import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
+import { useRealtimeRefresh } from '@/lib/hooks/useRealtimeRefresh'
 import { formatDate } from '@/lib/utils/dates'
 
 interface KanbanBoardProps {
@@ -45,6 +46,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
   const router = useRouter()
   const { toast } = useToast()
   useRefreshOnFocus(() => setDetailTarget(null))
+  useRealtimeRefresh(projectId)
 
   const activeSprint = sprints.find((s) => s.status === 'active') ?? null
 
