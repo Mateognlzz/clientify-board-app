@@ -51,7 +51,7 @@ export function IssuePageClient({ issue: initialIssue, projectId, currentUserId,
   return (
     <>
       {/* Page title */}
-      <h1 className="text-xl font-semibold text-gray-900 mb-6">{issue.title}</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">{issue.key}</h1>
 
       {/* Issue detail */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">

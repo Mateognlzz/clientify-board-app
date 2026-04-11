@@ -1,5 +1,5 @@
-export type IssueStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled' | 'ready_for_production' | 'staging_qa' | 'stopper'
-export type IssuePriority = 'low' | 'medium' | 'high' | 'urgent'
+export type IssueStatus = 'todo' | 'in_progress' | 'in_review' | 'staging_qa' | 'ready_for_production' | 'done' | 'canceled' | 'stopper'
+export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest'
 export type IssueType = 'bug' | 'feature' | 'task' | 'improvement'
 
 export interface Issue {
@@ -15,7 +15,10 @@ export interface Issue {
   reporter_id: string
   position: number
   due_date: string | null
+  start_date: string | null
   sprint_id: string | null
+  slack_thread: string | null
+  pause_reason: string | null
   created_at: string
   updated_at: string
 }
@@ -29,7 +32,10 @@ export interface IssueCreate {
   type?: IssueType
   assignee_id?: string
   due_date?: string
+  start_date?: string | null
   sprint_id?: string | null
+  slack_thread?: string | null
+  pause_reason?: string | null
 }
 
 export interface IssueUpdate {
@@ -40,8 +46,11 @@ export interface IssueUpdate {
   type?: IssueType
   assignee_id?: string | null
   due_date?: string | null
+  start_date?: string | null
   position?: number
   sprint_id?: string | null
+  slack_thread?: string | null
+  pause_reason?: string | null
 }
 
 export interface IssueWithDetails extends Issue {

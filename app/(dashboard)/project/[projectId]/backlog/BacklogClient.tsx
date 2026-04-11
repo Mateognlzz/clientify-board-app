@@ -382,7 +382,7 @@ export function BacklogClient({ projectId, currentUserId, issues, sprints: initi
           />
         )}
 
-        <Modal open={createIssueSprintId !== undefined} onClose={() => setCreateIssueSprintId(undefined)} title="New ticket">
+        <Modal open={createIssueSprintId !== undefined} onClose={() => setCreateIssueSprintId(undefined)} title="New ticket" size="xl">
           <IssueForm
             mode="create"
             projectId={projectId}
@@ -394,7 +394,7 @@ export function BacklogClient({ projectId, currentUserId, issues, sprints: initi
           />
         </Modal>
 
-        <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
+        <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.key ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
           {detailTarget && (
             <IssueDetail
               issue={detailTarget}
@@ -412,7 +412,7 @@ export function BacklogClient({ projectId, currentUserId, issues, sprints: initi
           )}
         </Modal>
 
-        <Modal open={editIssueTarget !== null} onClose={() => setEditIssueTarget(null)} title="Edit ticket">
+        <Modal open={editIssueTarget !== null} onClose={() => setEditIssueTarget(null)} title="Edit ticket" size="xl">
           {editIssueTarget && (
             <IssueForm mode="edit" issue={editIssueTarget} members={members} sprints={sprints} onSubmit={handleEditIssue} onCancel={() => setEditIssueTarget(null)} />
           )}

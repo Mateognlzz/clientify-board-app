@@ -1,14 +1,6 @@
 'use client'
 
-/**
- * Navbar — barra superior con info del usuario y botón de logout.
- *
- * Recibe el perfil desde el DashboardLayout (Server Component).
- * El logout llama directamente al cliente de Supabase y redirige a /login.
- */
-import { useRouter } from 'next/navigation'
-import { LogOut, User } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { User } from 'lucide-react'
 import type { UserProfile } from '@/types/auth.types'
 
 interface NavbarProps {
@@ -17,15 +9,6 @@ interface NavbarProps {
 }
 
 export function Navbar({ profile, breadcrumb }: NavbarProps) {
-  const router = useRouter()
-
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
-
   const initials = profile?.full_name
     ? profile.full_name
         .split(' ')
@@ -68,14 +51,7 @@ export function Navbar({ profile, breadcrumb }: NavbarProps) {
           </div>
         )}
 
-        <button
-          onClick={handleLogout}
-          className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-          title="Cerrar sesión"
-          aria-label="Cerrar sesión"
-        >
-          <LogOut size={16} />
-        </button>
+
       </div>
     </header>
   )

@@ -34,14 +34,17 @@ export function IssueForm(props: IssueFormProps) {
 
   const [title, setTitle] = useState(issue?.title ?? '')
   const [description, setDescription] = useState(issue?.description ?? '')
-  const [status, setStatus] = useState<IssueStatus>(issue?.status ?? 'backlog')
+  const [status, setStatus] = useState<IssueStatus>(issue?.status ?? 'todo')
   const [priority, setPriority] = useState<IssuePriority>(issue?.priority ?? 'medium')
   const [type, setType] = useState<IssueType>(issue?.type ?? 'task')
   const [assigneeId, setAssigneeId] = useState<string>(issue?.assignee_id ?? '')
   const [dueDate, setDueDate] = useState(issue?.due_date ?? '')
   const [sprintId, setSprintId] = useState<string>(issue?.sprint_id ?? props.defaultSprintId ?? '')
+  const [slackThread, setSlackThread] = useState(issue?.slack_thread ?? '')
   const [loading, setLoading] = useState(false)
   const [titleError, setTitleError] = useState('')
+
+  const availableSprints = (props.sprints ?? []).filter((s) => s.status === 'active')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -56,6 +59,7 @@ export function IssueForm(props: IssueFormProps) {
           assignee_id: assigneeId || null,
           due_date: dueDate || null,
           sprint_id: sprintId || null,
+          slack_thread: slackThread || null,
         })
       } else {
         const p = props as CreateModeProps
@@ -65,6 +69,7 @@ export function IssueForm(props: IssueFormProps) {
           assignee_id: assigneeId || undefined,
           due_date: dueDate || undefined,
           sprint_id: sprintId || null,
+          slack_thread: slackThread || null,
         })
       }
     } finally {
@@ -131,7 +136,7 @@ export function IssueForm(props: IssueFormProps) {
             className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {ALL_STATUSES.map((s) => (
+            {ALL_STATUSES.filter((s) => s !== 'stopper').map((s) => (
               <option key={s} value={s}>{statusLabel(s)}</option>
             ))}
           </select>
@@ -186,25 +191,22 @@ export function IssueForm(props: IssueFormProps) {
         />
       </div>
 
-      {/* Sprint */}
-      {props.sprints && props.sprints.length > 0 && (
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Sprint</label>
-          <select
-            value={sprintId}
-            onChange={(e) => setSprintId(e.target.value)}
-            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm
-                       focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Backlog (no sprint)</option>
-            {props.sprints.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}{s.status === 'active' ? ' (active)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+
+      {/* Slack Thread */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Slack Thread <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <input
+          type="url"
+          value={slackThread}
+          onChange={(e) => setSlackThread(e.target.value)}
+          placeholder="https://app.slack.com/..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                     placeholder:text-gray-400"
+        />
+      </div>
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-2">

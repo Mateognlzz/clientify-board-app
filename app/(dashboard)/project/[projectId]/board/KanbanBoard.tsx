@@ -78,6 +78,11 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
       const newStatus = over.id as IssueStatus
       if (!issue || issue.status === newStatus) return
 
+      if (newStatus === 'stopper' && !issue.pause_reason?.trim()) {
+        toast('Open the ticket and fill in Pause reason before moving to Stopper.', 'error')
+        return
+      }
+
       setIssues((prev) => prev.map((i) => (i.id === issue.id ? { ...i, status: newStatus } : i)))
       const { error } = await updateIssueAction(projectId, issue.id, { status: newStatus })
       if (error) { toast(error, 'error'); setIssues(initialIssues) }
@@ -163,7 +168,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
             <a href="backlog" className="text-blue-500 hover:underline">Backlog</a>.
           </div>
         )}
-        <div className="flex gap-3 p-6 h-full overflow-x-auto pb-8">
+        <div className="flex gap-3 px-6 py-4 overflow-x-auto pb-8 items-start">
           {ALL_STATUSES.map((status) => (
             <KanbanColumn
               key={status}
@@ -180,7 +185,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
       </DndContext>
 
       {/* Ticket detail modal */}
-      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
+      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.key ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
         {detailTarget && (
           <IssueDetail
             issue={detailTarget}
@@ -199,7 +204,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
       </Modal>
 
       {/* Edit modal */}
-      <Modal open={editTarget !== null} onClose={() => setEditTarget(null)} title="Edit ticket">
+      <Modal open={editTarget !== null} onClose={() => setEditTarget(null)} title="Edit ticket" size="xl">
         {editTarget && (
           <IssueForm mode="edit" issue={editTarget} members={members} sprints={sprints} onSubmit={handleEdit} onCancel={() => setEditTarget(null)} />
         )}
@@ -231,21 +236,29 @@ function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: status })
 
   return (
-    <div className="flex flex-col w-64 shrink-0">
-      <div className="flex items-center gap-2 mb-2 px-1">
+    <div className={cn(
+      'flex flex-col w-[272px] shrink-0 rounded-xl border transition-colors',
+      isOver ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'
+    )}>
+      {/* Column header */}
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
         <StatusBadge status={status} />
-        <span className="text-xs font-semibold text-gray-400">{issues.length}</span>
+        <span className="ml-auto text-[11px] font-semibold text-gray-400 bg-white border border-gray-200 rounded-full px-1.5 py-0.5 leading-none">
+          {issues.length}
+        </span>
       </div>
+
+      {/* Cards area — scrollable */}
       <div
         ref={setNodeRef}
-        className={cn(
-          'flex flex-col gap-2 flex-1 rounded-xl p-2 min-h-[200px] transition-colors',
-          isOver ? 'bg-blue-50 ring-2 ring-blue-200' : 'bg-gray-50'
-        )}
+        className="flex flex-col gap-2 p-2 min-h-[80px] max-h-[calc(100vh-260px)] overflow-y-auto"
       >
         {issues.map((issue) => (
           <KanbanCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />
         ))}
+        {issues.length === 0 && (
+          <p className="text-[11px] text-gray-300 text-center py-6 select-none">No issues</p>
+        )}
       </div>
     </div>
   )

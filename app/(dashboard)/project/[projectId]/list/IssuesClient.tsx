@@ -349,7 +349,7 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
       )}
 
       {/* Modal: ticket detail */}
-      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.title ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
+      <Modal open={detailTarget !== null} onClose={() => setDetailTarget(null)} title={detailTarget?.key ?? ''} size="2xl" externalHref={detailTarget ? `/project/${projectId}/issue/${detailTarget.id}` : undefined}>
         {detailTarget && (
           <IssueDetail
             issue={detailTarget}
@@ -368,12 +368,12 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
       </Modal>
 
       {/* Modal: create */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="New ticket">
-        <IssueForm mode="create" projectId={projectId} members={members} sprints={sprints} onSubmit={handleCreate} onCancel={() => setCreateOpen(false)} />
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="New ticket" size="xl">
+        <IssueForm mode="create" projectId={projectId} members={members} sprints={sprints} defaultSprintId={sprints.find((s) => s.status === 'active')?.id ?? null} onSubmit={handleCreate} onCancel={() => setCreateOpen(false)} />
       </Modal>
 
       {/* Modal: edit */}
-      <Modal open={editTarget !== null} onClose={() => setEditTarget(null)} title="Edit ticket">
+      <Modal open={editTarget !== null} onClose={() => setEditTarget(null)} title="Edit ticket" size="xl">
         {editTarget && (
           <IssueForm mode="edit" issue={editTarget} members={members} sprints={sprints} onSubmit={handleEdit} onCancel={() => setEditTarget(null)} />
         )}

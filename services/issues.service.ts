@@ -21,7 +21,10 @@ type RawIssue = {
   reporter_id: string
   position: number
   due_date: string | null
+  start_date: string | null
   sprint_id: string | null
+  slack_thread: string | null
+  pause_reason: string | null
   created_at: string
   updated_at: string
   assignee: { id: string; full_name: string | null; avatar_url: string | null } | null
@@ -60,6 +63,9 @@ export async function getIssues(
     position: row.position,
     due_date: row.due_date,
     sprint_id: row.sprint_id,
+    start_date: row.start_date,
+    slack_thread: row.slack_thread,
+    pause_reason: row.pause_reason,
     created_at: row.created_at,
     updated_at: row.updated_at,
     assignee: row.assignee,
@@ -101,6 +107,7 @@ export async function getIssueById(
       position: row.position,
       due_date: row.due_date,
       sprint_id: row.sprint_id,
+      slack_thread: row.slack_thread,
       created_at: row.created_at,
       updated_at: row.updated_at,
       assignee: row.assignee,
@@ -121,13 +128,14 @@ export async function createIssue(
       project_id: data.project_id,
       title: data.title.trim(),
       description: data.description?.trim() || null,
-      status: data.status ?? 'backlog',
+      status: data.status ?? 'todo',
       priority: data.priority ?? 'medium',
       type: data.type ?? 'task',
       assignee_id: data.assignee_id ?? null,
       reporter_id: userId,
       due_date: data.due_date ?? null,
       ...(data.sprint_id !== undefined && { sprint_id: data.sprint_id }),
+      slack_thread: data.slack_thread ?? null,
     })
     .select()
     .single()
@@ -157,6 +165,9 @@ export async function updateIssue(
       ...(data.due_date !== undefined && { due_date: data.due_date }),
       ...(data.position !== undefined && { position: data.position }),
       ...(data.sprint_id !== undefined && { sprint_id: data.sprint_id }),
+      ...(data.start_date !== undefined && { start_date: data.start_date }),
+      ...(data.slack_thread !== undefined && { slack_thread: data.slack_thread }),
+      ...(data.pause_reason !== undefined && { pause_reason: data.pause_reason }),
     })
     .eq('id', issueId)
     .select()

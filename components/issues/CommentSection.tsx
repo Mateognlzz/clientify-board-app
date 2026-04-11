@@ -392,7 +392,7 @@ function CommentItem({
   )
 }
 
-function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+export function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   const close = useCallback(() => onClose(), [onClose])
 
   useEffect(() => {
