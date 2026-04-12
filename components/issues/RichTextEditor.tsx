@@ -28,12 +28,17 @@ export function buildDisplayExtensions() {
 function buildEditorExtensions(
   membersRef: React.MutableRefObject<ProjectMemberPreview[]>,
   placeholder: string,
+  allowMentions: boolean,
 ) {
-  return [
+  const base = [
     StarterKit.configure({ codeBlock: false }),
     CodeBlockLowlight.configure({ lowlight }),
     ImageExtension.configure({ inline: false, allowBase64: true }),
     Placeholder.configure({ placeholder }),
+  ]
+  if (!allowMentions) return base
+  return [
+    ...base,
     Mention.configure({
       HTMLAttributes: { class: 'mention-chip' },
       suggestion: {
@@ -94,6 +99,7 @@ interface RichTextEditorProps {
   initialContent: JSONContent | null
   members: ProjectMemberPreview[]
   placeholder?: string
+  allowMentions?: boolean
   uploadImage: (file: File) => Promise<string | null>
   onReady?: (getJson: () => JSONContent) => void
   minHeight?: string
@@ -102,7 +108,8 @@ interface RichTextEditorProps {
 export function RichTextEditor({
   initialContent,
   members,
-  placeholder = 'Write something… use @ to mention someone',
+  placeholder = 'Write something…',
+  allowMentions = false,
   uploadImage,
   onReady,
   minHeight = '120px',
@@ -113,7 +120,7 @@ export function RichTextEditor({
   const imageInputRef = useRef<HTMLInputElement>(null)
   const uploadingRef = useRef(false)
 
-  const extensions = useMemo(() => buildEditorExtensions(membersRef, placeholder), [placeholder])
+  const extensions = useMemo(() => buildEditorExtensions(membersRef, placeholder, allowMentions), [placeholder, allowMentions])
 
   const editor = useEditor({
     immediatelyRender: false,

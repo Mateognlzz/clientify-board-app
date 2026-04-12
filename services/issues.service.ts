@@ -31,6 +31,7 @@ type RawIssue = {
   assignee: { id: string; full_name: string | null; avatar_url: string | null } | null
   reporter: { id: string; full_name: string | null; avatar_url: string | null } | null
   epic: { id: string; name: string; color: string } | null
+  comments: { count: number }[]
 }
 
 export async function getIssues(
@@ -43,7 +44,8 @@ export async function getIssues(
       *,
       assignee:profiles!issues_assignee_id_fkey(id, full_name, avatar_url),
       reporter:profiles!issues_reporter_id_fkey(id, full_name, avatar_url),
-      epic:epics(id, name, color)
+      epic:epics(id, name, color),
+      comments(count)
     `)
     .eq('project_id', projectId)
     .order('position', { ascending: true })
@@ -75,6 +77,7 @@ export async function getIssues(
     assignee: row.assignee,
     reporter: row.reporter ?? { id: row.reporter_id, full_name: null, avatar_url: null },
     epic: row.epic,
+    comment_count: row.comments?.[0]?.count ?? 0,
   }))
 
   return { data: issues, error: null }
@@ -90,7 +93,8 @@ export async function getIssueById(
       *,
       assignee:profiles!issues_assignee_id_fkey(id, full_name, avatar_url),
       reporter:profiles!issues_reporter_id_fkey(id, full_name, avatar_url),
-      epic:epics(id, name, color)
+      epic:epics(id, name, color),
+      comments(count)
     `)
     .eq('id', issueId)
     .single()
@@ -122,6 +126,7 @@ export async function getIssueById(
       assignee: row.assignee,
       reporter: row.reporter ?? { id: row.reporter_id, full_name: null, avatar_url: null },
       epic: row.epic,
+      comment_count: row.comments?.[0]?.count ?? 0,
     },
     error: null,
   }

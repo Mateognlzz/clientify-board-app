@@ -37,6 +37,7 @@ interface ActiveFilters {
 interface IssuesClientProps {
   projectId: string
   currentUserId: string
+  canDelete: boolean
   issues: IssueWithDetails[]
   sprints: Sprint[]
   members: ProjectMemberPreview[]
@@ -44,7 +45,7 @@ interface IssuesClientProps {
   initialFilters: ActiveFilters
 }
 
-export function IssuesClient({ projectId, currentUserId, issues, sprints, members, epics, initialFilters }: IssuesClientProps) {
+export function IssuesClient({ projectId, currentUserId, canDelete, issues, sprints, members, epics, initialFilters }: IssuesClientProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -311,7 +312,11 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
                         className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
                       >
                         <MessageSquare size={13} />
-                        <span>Add comment</span>
+                        <span>
+                          {issue.comment_count > 0
+                            ? `${issue.comment_count} comment${issue.comment_count === 1 ? '' : 's'}`
+                            : 'Add comment'}
+                        </span>
                       </button>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
@@ -373,6 +378,7 @@ export function IssuesClient({ projectId, currentUserId, issues, sprints, member
             members={members}
             sprints={sprints}
             epics={epics}
+            canDelete={canDelete}
             onEdit={() => openEdit(detailTarget)}
             onDelete={() => openDelete(detailTarget)}
             onUpdated={(patch) => {

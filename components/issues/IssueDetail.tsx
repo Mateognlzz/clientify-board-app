@@ -24,6 +24,7 @@ interface IssueDetailProps {
   members: ProjectMemberPreview[]
   sprints?: Sprint[]
   epics?: Epic[]
+  canDelete?: boolean
   onEdit: () => void
   onDelete: () => void
   onUpdated: (patch: Partial<IssueUpdate>) => void
@@ -55,6 +56,7 @@ export function IssueDetail({
   members,
   sprints,
   epics = [],
+  canDelete = false,
   onEdit,
   onDelete,
   onUpdated,
@@ -245,7 +247,7 @@ export function IssueDetail({
                   <RichTextEditor
                     initialContent={parseDescription(descriptionRaw)}
                     members={members}
-                    placeholder="Describe the ticket… use @ to mention someone"
+                    placeholder="Describe the ticket…"
                     uploadImage={uploadImage}
                     onReady={handleEditorReady}
                     minHeight="140px"
@@ -378,11 +380,13 @@ export function IssueDetail({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
-          <Button onClick={onDelete} variant="secondary" size="sm" className="text-red-600 hover:bg-red-50 hover:border-red-200">
-            <Trash2 size={13} /> Delete
-          </Button>
-        </div>
+        {canDelete && (
+          <div className="flex gap-2">
+            <Button onClick={onDelete} variant="secondary" size="sm" className="text-red-600 hover:bg-red-50 hover:border-red-200">
+              <Trash2 size={13} /> Delete
+            </Button>
+          </div>
+        )}
 
         {/* Comments */}
         <CommentSection issueId={issue.id} projectId={projectId} currentUserId={currentUserId} members={members} />

@@ -39,13 +39,14 @@ import { createIssueAction, updateIssueAction, deleteIssueAction } from '../acti
 interface Props {
   projectId: string
   currentUserId: string
+  canDelete: boolean
   issues: IssueWithDetails[]
   sprints: Sprint[]
   members: ProjectMemberPreview[]
   epics: Epic[]
 }
 
-export function BacklogClient({ projectId, currentUserId, issues, sprints: initialSprints, members, epics: initialEpics }: Props) {
+export function BacklogClient({ projectId, currentUserId, canDelete, issues, sprints: initialSprints, members, epics: initialEpics }: Props) {
   const router = useRouter()
   const { toast } = useToast()
   useRefreshOnFocus(() => setDetailTarget(null))
@@ -477,6 +478,7 @@ export function BacklogClient({ projectId, currentUserId, issues, sprints: initi
               members={members}
               sprints={sprints}
               epics={epics}
+              canDelete={canDelete}
               onEdit={() => { setDetailTarget(null); setEditIssueTarget(detailTarget) }}
               onDelete={() => { setDetailTarget(null); setDeleteIssueTarget(detailTarget) }}
               onUpdated={(patch) => {

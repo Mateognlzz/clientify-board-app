@@ -152,7 +152,7 @@ export function IssueForm(props: IssueFormProps) {
         <RichTextEditor
           initialContent={issue?.description ? parseDescription(issue.description) : null}
           members={props.members}
-          placeholder="Add more details… use @ to mention someone"
+          placeholder="Add more details…"
           uploadImage={uploadImage}
           onReady={handleEditorReady}
           minHeight="100px"

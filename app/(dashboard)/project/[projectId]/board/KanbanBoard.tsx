@@ -38,13 +38,14 @@ import { formatDate } from '@/lib/utils/dates'
 interface KanbanBoardProps {
   projectId: string
   currentUserId: string
+  canDelete: boolean
   issues: IssueWithDetails[]
   sprints: Sprint[]
   members: ProjectMemberPreview[]
   epics: Epic[]
 }
 
-export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, sprints, members, epics }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initialIssues, sprints, members, epics }: KanbanBoardProps) {
   const router = useRouter()
   const { toast } = useToast()
   useRefreshOnFocus(() => setDetailTarget(null))
@@ -170,7 +171,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
             <a href="backlog" className="text-blue-500 hover:underline">Backlog</a>.
           </div>
         )}
-        <div className="flex gap-3 px-6 py-4 overflow-x-auto pb-8 items-start">
+        <div className="flex gap-3 px-6 py-4 overflow-x-auto pb-8 items-stretch">
           {ALL_STATUSES.map((status) => (
             <KanbanColumn
               key={status}
@@ -196,6 +197,7 @@ export function KanbanBoard({ projectId, currentUserId, issues: initialIssues, s
             members={members}
             sprints={sprints}
             epics={epics}
+            canDelete={canDelete}
             onEdit={() => { setDetailTarget(null); setEditTarget(detailTarget) }}
             onDelete={() => { setDetailTarget(null); setDeleteTarget(detailTarget) }}
             onUpdated={(patch) => {
@@ -251,10 +253,10 @@ function KanbanColumn({
         </span>
       </div>
 
-      {/* Cards area — scrollable */}
+      {/* Cards area — grows with content */}
       <div
         ref={setNodeRef}
-        className="flex flex-col gap-2 p-2 min-h-[80px] max-h-[calc(100vh-260px)] overflow-y-auto"
+        className="flex flex-col gap-2 p-2 min-h-[80px] flex-1"
       >
         {issues.map((issue) => (
           <KanbanCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />

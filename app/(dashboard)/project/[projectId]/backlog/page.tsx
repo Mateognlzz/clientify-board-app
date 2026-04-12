@@ -27,10 +27,14 @@ export default async function BacklogPage({ params }: Props) {
     getEpics(admin, projectId),
   ])
 
+  const currentMember = (members ?? []).find((m) => m.user_id === user.id)
+  const canDelete = currentMember?.role === 'owner' || currentMember?.role === 'admin'
+
   return (
     <BacklogClient
       projectId={projectId}
       currentUserId={user.id}
+      canDelete={canDelete}
       issues={issues ?? []}
       sprints={sprints ?? []}
       members={members ?? []}

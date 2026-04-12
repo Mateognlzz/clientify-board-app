@@ -29,6 +29,9 @@ export default async function IssuesListPage({ params, searchParams }: Props) {
     getEpics(admin, projectId),
   ])
 
+  const currentMember = (members ?? []).find((m) => m.user_id === user.id)
+  const canDelete = currentMember?.role === 'owner' || currentMember?.role === 'admin'
+
   // Parse filter params (comma-separated values)
   function parseParam(key: string): string[] {
     const val = filters[key]
@@ -41,6 +44,7 @@ export default async function IssuesListPage({ params, searchParams }: Props) {
       <IssuesClient
         projectId={projectId}
         currentUserId={user.id}
+        canDelete={canDelete}
         issues={issues ?? []}
         sprints={sprints ?? []}
         members={members ?? []}
