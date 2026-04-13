@@ -18,15 +18,16 @@ import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { IssueForm } from '@/components/issues/IssueForm'
 import { IssueDetail } from '@/components/issues/IssueDetail'
-import { StatusBadge, ALL_STATUSES, statusLabel } from '@/components/issues/StatusBadge'
+import { StatusBadge } from '@/components/issues/StatusBadge'
 import { PriorityIcon, ALL_PRIORITIES, priorityLabel } from '@/components/issues/PriorityIcon'
-import { TypeIcon, ALL_TYPES, typeLabel } from '@/components/issues/TypeIcon'
+import { TypeIcon } from '@/components/issues/TypeIcon'
 import { useToast } from '@/providers/ToastProvider'
+import { useProjectSettings, formatSettingLabel } from '@/contexts/ProjectSettingsContext'
 import { cn } from '@/lib/utils/cn'
 import { formatDate } from '@/lib/utils/dates'
 import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
 import { useRealtimeRefresh } from '@/lib/hooks/useRealtimeRefresh'
-import type { IssueWithDetails, IssueCreate, IssueUpdate, IssueStatus, IssuePriority, IssueType } from '@/types/issue.types'
+import type { IssueWithDetails, IssueCreate, IssueUpdate, IssuePriority } from '@/types/issue.types'
 import type { Sprint, SprintCreate, SprintUpdate } from '@/types/sprint.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Epic } from '@/types/epic.types'
@@ -49,6 +50,7 @@ interface Props {
 export function BacklogClient({ projectId, currentUserId, canDelete, issues, sprints: initialSprints, members, epics: initialEpics }: Props) {
   const router = useRouter()
   const { toast } = useToast()
+  const { statuses: projectStatuses, types: projectTypes } = useProjectSettings()
   useRefreshOnFocus(() => setDetailTarget(null))
   useRealtimeRefresh(projectId)
 
@@ -68,8 +70,8 @@ export function BacklogClient({ projectId, currentUserId, canDelete, issues, spr
 
   // Filters
   const [filterAssignees, setFilterAssignees] = useState<string[]>([])
-  const [filterTypes, setFilterTypes] = useState<IssueType[]>([])
-  const [filterStatuses, setFilterStatuses] = useState<IssueStatus[]>([])
+  const [filterTypes, setFilterTypes] = useState<string[]>([])
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([])
   const [filterPriorities, setFilterPriorities] = useState<IssuePriority[]>([])
   const [filterEpics, setFilterEpics] = useState<string[]>([])
 
@@ -335,15 +337,15 @@ export function BacklogClient({ projectId, currentUserId, canDelete, issues, spr
           />
           <FilterDropdown
             label="Type"
-            options={ALL_TYPES.map((t) => ({ value: t, label: typeLabel(t) }))}
-            selected={filterTypes as string[]}
-            onChange={(v) => setFilterTypes(v as IssueType[])}
+            options={projectTypes.map((t) => ({ value: t.name, label: formatSettingLabel(t.name) }))}
+            selected={filterTypes}
+            onChange={setFilterTypes}
           />
           <FilterDropdown
             label="Status"
-            options={ALL_STATUSES.map((s) => ({ value: s, label: statusLabel(s) }))}
-            selected={filterStatuses as string[]}
-            onChange={(v) => setFilterStatuses(v as IssueStatus[])}
+            options={projectStatuses.map((s) => ({ value: s.name, label: formatSettingLabel(s.name) }))}
+            selected={filterStatuses}
+            onChange={setFilterStatuses}
           />
           <FilterDropdown
             label="Priority"

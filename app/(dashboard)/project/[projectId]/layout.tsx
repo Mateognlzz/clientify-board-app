@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
 import { LayoutList, Kanban, Users, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getProject } from '@/services/projects.service'
+import { getProjectStatuses } from '@/services/project-statuses.service'
+import { getProjectTypes } from '@/services/project-types.service'
+import { ProjectSettingsProvider } from '@/contexts/ProjectSettingsContext'
 import { ProjectNav } from '@/components/layout/ProjectNav'
 import { ProjectLayoutShell } from './ProjectLayoutShell'
 
@@ -19,6 +23,12 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   const { data: project, error } = await getProject(supabase, projectId)
   if (error || !project) redirect('/dashboard')
+
+  const admin = createAdminClient()
+  const [{ data: statuses }, { data: types }] = await Promise.all([
+    getProjectStatuses(admin, projectId),
+    getProjectTypes(admin, projectId),
+  ])
 
   const navItems = [
     { href: `/project/${projectId}/backlog`, label: 'Backlog', icon: <BookOpen size={14} /> },
@@ -46,7 +56,9 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   return (
     <ProjectLayoutShell header={header}>
-      {children}
+      <ProjectSettingsProvider statuses={statuses ?? []} types={types ?? []}>
+        {children}
+      </ProjectSettingsProvider>
     </ProjectLayoutShell>
   )
 }

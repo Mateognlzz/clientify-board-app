@@ -35,15 +35,16 @@ export default async function DashboardLayout({
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase
       .from('project_members')
-      .select('project_id')
+      .select('project_id, role')
       .eq('user_id', user.id),
   ])
 
   const profile = profileResult.data as UserProfile | null
 
   // Obtener los proyectos a partir de los IDs de membresía
-  const memberRows = (membersResult.data ?? []) as Array<{ project_id: string }>
+  const memberRows = (membersResult.data ?? []) as Array<{ project_id: string; role: string }>
   const projectIds = memberRows.map((m) => m.project_id)
+  const ownerProjectIds = memberRows.filter((m) => m.role === 'owner').map((m) => m.project_id)
 
   const { data: projects } =
     projectIds.length > 0
@@ -62,7 +63,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar projects={projectList} />
+      <Sidebar projects={projectList} ownerProjectIds={ownerProjectIds} />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Navbar profile={profile} />
         <main className="flex-1 overflow-y-auto">

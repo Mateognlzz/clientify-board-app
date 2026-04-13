@@ -9,8 +9,16 @@ const TYPE_CONFIG: Record<IssueType, { label: string; icon: React.ReactNode; cla
   improvement: { label: 'Improvement', icon: <TrendingUp size={13} />,  className: 'text-purple-500' },
 }
 
-export function TypeIcon({ type, showLabel = false }: { type: IssueType; showLabel?: boolean }) {
-  const config = TYPE_CONFIG[type]
+export function TypeIcon({ type, showLabel = false }: { type: string; showLabel?: boolean }) {
+  const config = TYPE_CONFIG[type as IssueType]
+  if (!config) {
+    return (
+      <span className="inline-flex items-center gap-1 text-gray-400" title={type}>
+        <CheckSquare size={13} />
+        {showLabel && <span className="text-xs capitalize">{type.replace(/_/g, ' ')}</span>}
+      </span>
+    )
+  }
   return (
     <span className={cn('inline-flex items-center gap-1', config.className)} title={config.label}>
       {config.icon}
@@ -19,8 +27,8 @@ export function TypeIcon({ type, showLabel = false }: { type: IssueType; showLab
   )
 }
 
-export function typeLabel(type: IssueType): string {
-  return TYPE_CONFIG[type]?.label ?? type
+export function typeLabel(type: string): string {
+  return TYPE_CONFIG[type as IssueType]?.label ?? type.replace(/_/g, ' ')
 }
 
 export const ALL_TYPES: IssueType[] = ['bug', 'feature', 'task', 'improvement']

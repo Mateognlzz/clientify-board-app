@@ -12,8 +12,19 @@ const STATUS_CONFIG: Record<IssueStatus, { label: string; className: string }> =
   stopper:              { label: 'Stopper',              className: 'bg-red-200 text-red-700' },
 }
 
-export function StatusBadge({ status }: { status: IssueStatus }) {
-  const config = STATUS_CONFIG[status]
+export function StatusBadge({ status, color }: { status: string; color?: string }) {
+  const config = STATUS_CONFIG[status as IssueStatus]
+  if (color || !config) {
+    const c = color ?? '#6b7280'
+    return (
+      <span
+        style={{ backgroundColor: c + '22', color: c }}
+        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize"
+      >
+        {status.replace(/_/g, ' ')}
+      </span>
+    )
+  }
   return (
     <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-medium', config.className)}>
       {config.label}
@@ -21,8 +32,8 @@ export function StatusBadge({ status }: { status: IssueStatus }) {
   )
 }
 
-export function statusLabel(status: IssueStatus): string {
-  return STATUS_CONFIG[status]?.label ?? status
+export function statusLabel(status: string): string {
+  return STATUS_CONFIG[status as IssueStatus]?.label ?? status.replace(/_/g, ' ')
 }
 
 export const ALL_STATUSES: IssueStatus[] = ['todo', 'in_progress', 'in_review', 'staging_qa', 'ready_for_production', 'done', 'canceled', 'stopper']

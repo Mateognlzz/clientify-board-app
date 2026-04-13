@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { TypeIcon } from '@/components/issues/TypeIcon'
 import { CommentSection, ImageLightbox } from '@/components/issues/CommentSection'
 import { RichTextEditor, renderDescriptionHTML, parseDescription } from '@/components/issues/RichTextEditor'
-import { statusLabel, ALL_STATUSES } from '@/components/issues/StatusBadge'
 import { priorityLabel, ALL_PRIORITIES } from '@/components/issues/PriorityIcon'
+import { useProjectSettings, formatSettingLabel } from '@/contexts/ProjectSettingsContext'
 import { useToast } from '@/providers/ToastProvider'
 import { updateIssueAction } from '@/app/(dashboard)/project/[projectId]/actions'
 import { uploadCommentImageAction } from '@/app/(dashboard)/project/[projectId]/comment-actions'
@@ -28,17 +28,6 @@ interface IssueDetailProps {
   onEdit: () => void
   onDelete: () => void
   onUpdated: (patch: Partial<IssueUpdate>) => void
-}
-
-const STATUS_CLASS: Record<IssueStatus, string> = {
-  todo:                 'bg-blue-100 text-blue-700 border-blue-200',
-  in_progress:          'bg-yellow-100 text-yellow-700 border-yellow-200',
-  in_review:            'bg-purple-100 text-purple-700 border-purple-200',
-  staging_qa:           'bg-orange-100 text-orange-700 border-orange-200',
-  ready_for_production: 'bg-teal-100 text-teal-700 border-teal-200',
-  done:                 'bg-green-100 text-green-700 border-green-200',
-  canceled:             'bg-red-100 text-red-500 border-red-200',
-  stopper:              'bg-red-200 text-red-700 border-red-300',
 }
 
 const PRIORITY_CLASS: Record<IssuePriority, string> = {
@@ -62,6 +51,7 @@ export function IssueDetail({
   onUpdated,
 }: IssueDetailProps) {
   const { toast } = useToast()
+  const { statuses: projectStatuses } = useProjectSettings()
 
   // Select / date fields
   const [status, setStatus] = useState<IssueStatus>(issue.status)
@@ -399,18 +389,26 @@ export function IssueDetail({
         <div className="space-y-1">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</p>
           <div className="relative">
-            <div className={`flex items-center justify-between text-sm font-semibold px-3 py-2 rounded-lg border ${STATUS_CLASS[status]}`}>
-              <span>{statusLabel(status)}</span>
-              <ChevronDown size={14} className="opacity-60 shrink-0" />
-            </div>
+            {(() => {
+              const color = projectStatuses.find(s => s.name === status)?.color ?? '#6b7280'
+              return (
+                <div
+                  style={{ backgroundColor: color + '22', color, borderColor: color + '66' }}
+                  className="flex items-center justify-between text-sm font-semibold px-3 py-2 rounded-lg border"
+                >
+                  <span>{formatSettingLabel(status)}</span>
+                  <ChevronDown size={14} className="opacity-60 shrink-0" />
+                </div>
+              )
+            })()}
             <select
               value={status}
               disabled={saving === 'status'}
               onChange={(e) => handleChange('status', e.target.value)}
               className="absolute inset-0 w-full opacity-0 cursor-pointer disabled:cursor-default"
             >
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>{statusLabel(s)}</option>
+              {projectStatuses.map((s) => (
+                <option key={s.id} value={s.name}>{formatSettingLabel(s.name)}</option>
               ))}
             </select>
           </div>

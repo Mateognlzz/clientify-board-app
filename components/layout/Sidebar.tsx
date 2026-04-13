@@ -13,6 +13,7 @@ import {
   Star,
   Plus,
   Users,
+  MoreHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { signOutAction } from '@/app/auth-actions'
@@ -28,9 +29,10 @@ interface SidebarProject {
 
 interface SidebarProps {
   projects: SidebarProject[]
+  ownerProjectIds: string[]
 }
 
-export function Sidebar({ projects: initialProjects }: SidebarProps) {
+export function Sidebar({ projects: initialProjects, ownerProjectIds }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [projects, setProjects] = useState(initialProjects)
   const [createOpen, setCreateOpen] = useState(false)
@@ -117,13 +119,12 @@ export function Sidebar({ projects: initialProjects }: SidebarProps) {
             )}
 
             {projects.map((project) => (
-              <NavItem
+              <ProjectNavItem
                 key={project.id}
-                href={`/project/${project.id}`}
-                icon={<FolderKanban size={16} />}
-                label={project.name}
+                project={project}
                 collapsed={collapsed}
                 active={pathname.startsWith(`/project/${project.id}`)}
+                isOwner={ownerProjectIds.includes(project.id)}
               />
             ))}
 
@@ -186,16 +187,62 @@ export function Sidebar({ projects: initialProjects }: SidebarProps) {
   )
 }
 
+// ── Project nav item with optional settings button ────────────────────────────
+
+function ProjectNavItem({
+  project, collapsed, active, isOwner,
+}: {
+  project: SidebarProject
+  collapsed: boolean
+  active: boolean
+  isOwner: boolean
+}) {
+  return (
+    <div className="group relative flex items-center">
+      <Link
+        href={`/project/${project.id}/backlog`}
+        title={collapsed ? project.name : undefined}
+        className={cn(
+          'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors flex-1 min-w-0',
+          active
+            ? 'bg-blue-600 text-white'
+            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+        )}
+      >
+        <span className="shrink-0"><FolderKanban size={16} /></span>
+        {!collapsed && (
+          <span className="truncate flex-1 text-[13px]">{project.name}</span>
+        )}
+      </Link>
+      {!collapsed && isOwner && (
+        <Link
+          href={`/project/${project.id}/settings`}
+          title="Project settings"
+          className={cn(
+            'absolute right-1 p-0.5 rounded transition-colors opacity-0 group-hover:opacity-100',
+            active
+              ? 'text-blue-200 hover:bg-blue-500'
+              : 'text-gray-500 hover:text-white hover:bg-gray-700'
+          )}
+        >
+          <MoreHorizontal size={14} />
+        </Link>
+      )}
+    </div>
+  )
+}
+
+// ── Generic nav item ──────────────────────────────────────────────────────────
+
 interface NavItemProps {
   href: string
   icon: React.ReactNode
   label: string
-  badge?: string
   collapsed: boolean
   active: boolean
 }
 
-function NavItem({ href, icon, label, badge, collapsed, active }: NavItemProps) {
+function NavItem({ href, icon, label, collapsed, active }: NavItemProps) {
   return (
     <Link
       href={href}
@@ -209,17 +256,7 @@ function NavItem({ href, icon, label, badge, collapsed, active }: NavItemProps) 
     >
       <span className="shrink-0">{icon}</span>
       {!collapsed && (
-        <>
-          <span className="truncate flex-1 text-[13px]">{label}</span>
-          {badge && (
-            <span className={cn(
-              'text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded',
-              active ? 'bg-blue-500 text-blue-100' : 'bg-gray-700 text-gray-400'
-            )}>
-              {badge}
-            </span>
-          )}
-        </>
+        <span className="truncate flex-1 text-[13px]">{label}</span>
       )}
     </Link>
   )

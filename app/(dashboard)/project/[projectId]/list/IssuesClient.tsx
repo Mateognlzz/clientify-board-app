@@ -9,15 +9,16 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { IssueForm } from '@/components/issues/IssueForm'
 import { IssueDetail } from '@/components/issues/IssueDetail'
-import { StatusBadge, ALL_STATUSES, statusLabel } from '@/components/issues/StatusBadge'
+import { StatusBadge } from '@/components/issues/StatusBadge'
 import { PriorityIcon, ALL_PRIORITIES, priorityLabel } from '@/components/issues/PriorityIcon'
-import { TypeIcon, ALL_TYPES, typeLabel } from '@/components/issues/TypeIcon'
+import { TypeIcon } from '@/components/issues/TypeIcon'
 import { useToast } from '@/providers/ToastProvider'
+import { useProjectSettings, formatSettingLabel } from '@/contexts/ProjectSettingsContext'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, isOverdue } from '@/lib/utils/dates'
 import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
 import { useRealtimeRefresh } from '@/lib/hooks/useRealtimeRefresh'
-import type { IssueWithDetails, IssueCreate, IssueUpdate, IssueStatus, IssuePriority, IssueType } from '@/types/issue.types'
+import type { IssueWithDetails, IssueCreate, IssueUpdate, IssuePriority } from '@/types/issue.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import type { Epic } from '@/types/epic.types'
@@ -50,6 +51,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const { statuses: projectStatuses, types: projectTypes } = useProjectSettings()
   useRefreshOnFocus(() => setDetailTarget(null))
   useRealtimeRefresh(projectId)
 
@@ -183,7 +185,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
         {/* Filter dropdowns */}
         <FilterDropdown
           label="Status"
-          options={ALL_STATUSES.map((s) => ({ value: s, label: statusLabel(s) }))}
+          options={projectStatuses.map((s) => ({ value: s.name, label: formatSettingLabel(s.name) }))}
           selected={filters.statuses}
           onChange={(v) => applyFilters({ ...filters, statuses: v })}
         />
@@ -195,7 +197,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
         />
         <FilterDropdown
           label="Type"
-          options={ALL_TYPES.map((t) => ({ value: t, label: typeLabel(t) }))}
+          options={projectTypes.map((t) => ({ value: t.name, label: formatSettingLabel(t.name) }))}
           selected={filters.types}
           onChange={(v) => applyFilters({ ...filters, types: v })}
         />
@@ -241,7 +243,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {filters.statuses.map((s) => (
-            <FilterChip key={s} label={statusLabel(s as IssueStatus)} onRemove={() =>
+            <FilterChip key={s} label={formatSettingLabel(s)} onRemove={() =>
               applyFilters({ ...filters, statuses: filters.statuses.filter((x) => x !== s) })} />
           ))}
           {filters.priorities.map((p) => (
@@ -249,7 +251,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
               applyFilters({ ...filters, priorities: filters.priorities.filter((x) => x !== p) })} />
           ))}
           {filters.types.map((t) => (
-            <FilterChip key={t} label={typeLabel(t as IssueType)} onRemove={() =>
+            <FilterChip key={t} label={formatSettingLabel(t)} onRemove={() =>
               applyFilters({ ...filters, types: filters.types.filter((x) => x !== t) })} />
           ))}
           {filters.assigneeId && (

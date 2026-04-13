@@ -22,11 +22,13 @@ import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { IssueDetail } from '@/components/issues/IssueDetail'
 import { IssueForm } from '@/components/issues/IssueForm'
-import { StatusBadge, ALL_STATUSES } from '@/components/issues/StatusBadge'
 import { PriorityIcon } from '@/components/issues/PriorityIcon'
 import { TypeIcon } from '@/components/issues/TypeIcon'
+import { StatusBadge } from '@/components/issues/StatusBadge'
 import { useToast } from '@/providers/ToastProvider'
-import type { IssueWithDetails, IssueStatus, IssueUpdate } from '@/types/issue.types'
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext'
+import type { ProjectStatus } from '@/types/project-settings.types'
+import type { IssueWithDetails, IssueUpdate } from '@/types/issue.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import type { Epic } from '@/types/epic.types'
@@ -48,6 +50,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initialIssues, sprints, members, epics }: KanbanBoardProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { statuses: projectStatuses } = useProjectSettings()
   useRefreshOnFocus(() => setDetailTarget(null))
   useRealtimeRefresh(projectId)
 
@@ -83,16 +86,11 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
       setActiveIssue(null)
       if (!over) return
       const issue = issues.find((i) => i.id === active.id)
-      const newStatus = over.id as IssueStatus
+      const newStatus = over.id as string
       if (!issue || issue.status === newStatus) return
 
-      if (newStatus === 'stopper' && !issue.pause_reason?.trim()) {
-        toast('Open the ticket and fill in Pause reason before moving to Stopper.', 'error')
-        return
-      }
-
       setIssues((prev) => prev.map((i) => (i.id === issue.id ? { ...i, status: newStatus } : i)))
-      const { error } = await updateIssueAction(projectId, issue.id, { status: newStatus })
+      const { error } = await updateIssueAction(projectId, issue.id, { status: newStatus as IssueUpdate['status'] })
       if (error) { toast(error, 'error'); setIssues(initialIssues) }
       else router.refresh()
     },
@@ -126,12 +124,12 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
     ? issues.filter((i) => i.sprint_id === activeSprint.id)
     : issues
 
-  const issuesByStatus = ALL_STATUSES.reduce<Record<IssueStatus, IssueWithDetails[]>>(
-    (acc, status) => {
-      acc[status] = boardIssues.filter((i) => i.status === status)
+  const issuesByStatus = projectStatuses.reduce<Record<string, IssueWithDetails[]>>(
+    (acc, s) => {
+      acc[s.name] = boardIssues.filter((i) => i.status === s.name)
       return acc
     },
-    {} as Record<IssueStatus, IssueWithDetails[]>
+    {}
   )
 
   const doneCount = activeSprint ? boardIssues.filter((i) => i.status === 'done').length : 0
@@ -177,11 +175,11 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
           </div>
         )}
         <div className="flex gap-3 px-6 py-4 overflow-x-auto pb-8 items-stretch">
-          {ALL_STATUSES.map((status) => (
+          {projectStatuses.map((s) => (
             <KanbanColumn
-              key={status}
-              status={status}
-              issues={issuesByStatus[status]}
+              key={s.id}
+              status={s}
+              issues={issuesByStatus[s.name] ?? []}
               onCardClick={setDetailTarget}
             />
           ))}
@@ -239,11 +237,11 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
 function KanbanColumn({
   status, issues, onCardClick,
 }: {
-  status: IssueStatus
+  status: ProjectStatus
   issues: IssueWithDetails[]
   onCardClick: (issue: IssueWithDetails) => void
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const { setNodeRef, isOver } = useDroppable({ id: status.name })
 
   return (
     <div className={cn(
@@ -252,7 +250,7 @@ function KanbanColumn({
     )}>
       {/* Column header */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
-        <StatusBadge status={status} />
+        <StatusBadge status={status.name} color={status.color ?? undefined} />
         <span className="ml-auto text-[11px] font-semibold text-gray-400 bg-white border border-gray-200 rounded-full px-1.5 py-0.5 leading-none">
           {issues.length}
         </span>
