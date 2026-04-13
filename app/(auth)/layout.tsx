@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 
 export const metadata: Metadata = {
   title: 'Acceso',
@@ -15,9 +16,7 @@ export default function AuthLayout({
         {/* Logo / Branding */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 mb-3">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">C</span>
-            </div>
+            <Image src="/logo.png" alt="Clientify Board" width={32} height={32} />
             <span className="text-xl font-bold text-gray-900">
               Clientify Board
             </span>
