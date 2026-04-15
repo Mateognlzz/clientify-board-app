@@ -53,7 +53,7 @@ export default async function IssuesListPage({ params, searchParams }: Props) {
           statuses: parseParam('status'),
           priorities: parseParam('priority'),
           types: parseParam('type'),
-          assigneeId: typeof filters.assignee === 'string' ? filters.assignee : '',
+          assignees: parseParam('assignee'),
           labels: parseParam('label'),
         }}
       />

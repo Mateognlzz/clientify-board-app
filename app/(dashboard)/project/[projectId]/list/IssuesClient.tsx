@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Plus, Search, Ticket, X, ChevronDown, MessageSquare, GripVertical } from 'lucide-react'
+import { Plus, Search, Ticket, MessageSquare, GripVertical } from 'lucide-react'
+import { JiraFilterButton, type FilterFieldDef } from '@/components/issues/JiraFilterButton'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   type DragStartEvent, type DragEndEvent,
@@ -40,7 +41,7 @@ interface ActiveFilters {
   statuses: string[]
   priorities: string[]
   types: string[]
-  assigneeId: string
+  assignees: string[]
   labels: string[]
 }
 
@@ -101,14 +102,14 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
     if (next.types.length) params.set('type', next.types.join(','))
     else params.delete('type')
 
-    if (next.assigneeId) params.set('assignee', next.assigneeId)
+    if (next.assignees.length) params.set('assignee', next.assignees.join(','))
     else params.delete('assignee')
 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [pathname, router, searchParams])
 
   const hasActiveFilters = filters.statuses.length > 0 || filters.priorities.length > 0 ||
-    filters.types.length > 0 || !!filters.assigneeId || filters.labels.length > 0
+    filters.types.length > 0 || filters.assignees.length > 0 || filters.labels.length > 0
 
   const filtered = useMemo(() => {
     return localIssues.filter((i) => {
@@ -119,10 +120,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
       if (filters.statuses.length && !filters.statuses.includes(i.status)) return false
       if (filters.priorities.length && !filters.priorities.includes(i.priority)) return false
       if (filters.types.length && !filters.types.includes(i.type)) return false
-      if (filters.assigneeId) {
-        if (filters.assigneeId === 'unassigned' && i.assignee_id) return false
-        if (filters.assigneeId !== 'unassigned' && i.assignee_id !== filters.assigneeId) return false
-      }
+      if (filters.assignees.length > 0 && !filters.assignees.includes(i.assignee_id ?? '__unassigned__')) return false
       if (filters.labels.length && !filters.labels.some((id) => i.labels?.some((l) => l.id === id))) return false
       return true
     })
@@ -200,7 +198,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
   }
 
   function clearFilters() {
-    applyFilters({ statuses: [], priorities: [], types: [], assigneeId: '', labels: [] })
+    applyFilters({ statuses: [], priorities: [], types: [], assignees: [], labels: [] })
   }
 
   return (
@@ -221,63 +219,37 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
           />
         </div>
 
-        {/* Filter dropdowns */}
-        <FilterDropdown
-          label="Status"
-          options={projectStatuses.map((s) => ({ value: s.name, label: formatSettingLabel(s.name) }))}
-          selected={filters.statuses}
-          onChange={(v) => applyFilters({ ...filters, statuses: v })}
-        />
-        <FilterDropdown
-          label="Priority"
-          options={ALL_PRIORITIES.map((p) => ({ value: p, label: priorityLabel(p) }))}
-          selected={filters.priorities}
-          onChange={(v) => applyFilters({ ...filters, priorities: v })}
-        />
-        <FilterDropdown
-          label="Type"
-          options={projectTypes.map((t) => ({ value: t.name, label: formatSettingLabel(t.name) }))}
-          selected={filters.types}
-          onChange={(v) => applyFilters({ ...filters, types: v })}
+        {/* Filter button */}
+        <JiraFilterButton
+          fields={[
+            {
+              id: 'statuses', label: 'Status',
+              options: projectStatuses.map((s) => ({ value: s.name, label: formatSettingLabel(s.name) })),
+            },
+            {
+              id: 'priorities', label: 'Priority',
+              options: ALL_PRIORITIES.map((p) => ({ value: p, label: priorityLabel(p) })),
+            },
+            {
+              id: 'types', label: 'Type',
+              options: projectTypes.map((t) => ({ value: t.name, label: formatSettingLabel(t.name) })),
+            },
+            {
+              id: 'assignees', label: 'Assignee',
+              options: [
+                { value: '__unassigned__', label: 'Unassigned' },
+                ...members.map((m) => ({ value: m.user_id, label: m.profile?.full_name ?? m.user_id, avatarUrl: m.profile?.avatar_url ?? null })),
+              ],
+            },
+            ...(projectLabels.length > 0 ? [{
+              id: 'labels', label: 'Labels',
+              options: projectLabels.map((l) => ({ value: l.id, label: l.name, color: l.color })),
+            } satisfies FilterFieldDef] : []),
+          ]}
+          values={filters as unknown as Record<string, string[]>}
+          onChange={(v) => applyFilters({ statuses: v.statuses ?? [], priorities: v.priorities ?? [], types: v.types ?? [], assignees: v.assignees ?? [], labels: v.labels ?? [] })}
         />
 
-        {projectLabels.length > 0 && (
-          <FilterDropdown
-            label="Label"
-            options={projectLabels.map((l) => ({ value: l.id, label: l.name }))}
-            selected={filters.labels}
-            onChange={(v) => applyFilters({ ...filters, labels: v })}
-          />
-        )}
-
-        {/* Assignee filter */}
-        <select
-          value={filters.assigneeId}
-          onChange={(e) => applyFilters({ ...filters, assigneeId: e.target.value })}
-          className={cn(
-            'px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
-            filters.assigneeId ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600'
-          )}
-        >
-          <option value="">Assignee</option>
-          <option value="unassigned">Unassigned</option>
-          {members.map((m) => (
-            <option key={m.user_id} value={m.user_id}>
-              {m.profile?.full_name ?? m.user_id}
-            </option>
-          ))}
-        </select>
-
-        {/* Clear filters */}
-        {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <X size={12} />
-            Clear
-          </button>
-        )}
 
         <div className="ml-auto">
           <Button onClick={() => setCreateOpen(true)}>
@@ -302,13 +274,13 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
             <FilterChip key={t} label={formatSettingLabel(t)} onRemove={() =>
               applyFilters({ ...filters, types: filters.types.filter((x) => x !== t) })} />
           ))}
-          {filters.assigneeId && (
+          {filters.assignees.map((a) => (
             <FilterChip
-              label={filters.assigneeId === 'unassigned' ? 'Unassigned' :
-                (members.find((m) => m.user_id === filters.assigneeId)?.profile?.full_name ?? 'Assignee')}
-              onRemove={() => applyFilters({ ...filters, assigneeId: '' })}
+              key={a}
+              label={a === '__unassigned__' ? 'Unassigned' : (members.find((m) => m.user_id === a)?.profile?.full_name ?? a)}
+              onRemove={() => applyFilters({ ...filters, assignees: filters.assignees.filter((x) => x !== a) })}
             />
-          )}
+          ))}
         </div>
       )}
 
@@ -537,65 +509,11 @@ function SortableIssueRow({
   )
 }
 
-// ── Filter dropdown ──────────────────────────────────────────────────────────
-
-function FilterDropdown({
-  label, options, selected, onChange,
-}: {
-  label: string
-  options: { value: string; label: string }[]
-  selected: string[]
-  onChange: (v: string[]) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const active = selected.length > 0
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          'flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors',
-          active
-            ? 'border-blue-400 bg-blue-50 text-blue-700'
-            : 'border-gray-300 text-gray-600 hover:border-gray-400'
-        )}
-      >
-        {label}
-        {active && <span className="font-semibold">({selected.length})</span>}
-        <ChevronDown size={13} />
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute top-full mt-1 left-0 z-20 bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[140px]">
-            {options.map(({ value, label: optLabel }) => {
-              const checked = selected.includes(value)
-              return (
-                <label key={value} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onChange(checked ? selected.filter((s) => s !== value) : [...selected, value])}
-                    className="rounded"
-                  />
-                  {optLabel}
-                </label>
-              )
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
       {label}
-      <button onClick={onRemove} className="hover:text-blue-900"><X size={10} /></button>
+      <button onClick={onRemove} className="hover:text-blue-900 ml-0.5">×</button>
     </span>
   )
 }
