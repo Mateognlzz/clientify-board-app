@@ -54,6 +54,7 @@ export default async function IssuesListPage({ params, searchParams }: Props) {
           priorities: parseParam('priority'),
           types: parseParam('type'),
           assigneeId: typeof filters.assignee === 'string' ? filters.assignee : '',
+          labels: parseParam('label'),
         }}
       />
     </div>

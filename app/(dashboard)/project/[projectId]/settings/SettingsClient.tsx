@@ -7,11 +7,12 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/providers/ToastProvider'
 import { formatSettingLabel } from '@/contexts/ProjectSettingsContext'
 import type { Epic } from '@/types/epic.types'
-import type { ProjectStatus, ProjectIssueType } from '@/types/project-settings.types'
+import type { ProjectStatus, ProjectIssueType, ProjectLabel } from '@/types/project-settings.types'
 import {
   createEpicSettingsAction, updateEpicSettingsAction, deleteEpicSettingsAction,
   createStatusAction, updateStatusAction, deleteStatusAction, reorderStatusesAction,
   createTypeAction, updateTypeAction, deleteTypeAction, reorderTypesAction,
+  createLabelAction, updateLabelAction, deleteLabelAction,
   deleteProjectSettingsAction,
 } from '../settings-actions'
 
@@ -20,15 +21,17 @@ interface Props {
   epics: Epic[]
   statuses: ProjectStatus[]
   types: ProjectIssueType[]
+  labels: ProjectLabel[]
 }
 
-export function SettingsClient({ projectId, epics: initialEpics, statuses: initialStatuses, types: initialTypes }: Props) {
+export function SettingsClient({ projectId, epics: initialEpics, statuses: initialStatuses, types: initialTypes, labels: initialLabels }: Props) {
   const router = useRouter()
   const { toast } = useToast()
 
   const [epics, setEpics] = useState(initialEpics)
   const [statuses, setStatuses] = useState(initialStatuses)
   const [types, setTypes] = useState(initialTypes)
+  const [labels, setLabels] = useState(initialLabels)
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false)
   const [deleteProjectLoading, setDeleteProjectLoading] = useState(false)
 
@@ -82,6 +85,14 @@ export function SettingsClient({ projectId, epics: initialEpics, statuses: initi
           onReorder={(projectId, updates) => reorderTypesAction(projectId, updates)}
         />
       </SettingSection>
+
+      <SettingSection
+        title="Labels"
+        description="Create labels to categorize tickets. Labels can be applied when creating or editing a ticket."
+      >
+        <LabelsManager projectId={projectId} labels={labels} setLabels={setLabels} toast={toast} refresh={refresh} />
+      </SettingSection>
+
       <div className="bg-white rounded-xl border border-red-200 overflow-hidden">
         <div className="p-5">
           <div className="flex items-center justify-between">
@@ -478,6 +489,108 @@ function ItemManager<T extends ItemBase>({
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleCreate() }}
           placeholder="New name…"
+          className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+        />
+        <button
+          onClick={handleCreate}
+          disabled={loading || !newName.trim()}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Plus size={13} /> Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Labels manager (no position, ordered by name) ─────────────────────────────
+
+function LabelsManager({
+  projectId, labels, setLabels, toast, refresh,
+}: {
+  projectId: string
+  labels: ProjectLabel[]
+  setLabels: React.Dispatch<React.SetStateAction<ProjectLabel[]>>
+  toast: (msg: string, type: 'success' | 'error') => void
+  refresh: () => void
+}) {
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState('#6366f1')
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState('#6366f1')
+  const [loading, setLoading] = useState(false)
+
+  async function handleCreate() {
+    if (!newName.trim()) return
+    setLoading(true)
+    const { data, error } = await createLabelAction(projectId, newName.trim(), newColor)
+    setLoading(false)
+    if (error || !data) { toast(error ?? 'Error', 'error'); return }
+    setLabels((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    setNewName('')
+    setNewColor('#6366f1')
+    toast('Label created.', 'success')
+    refresh()
+  }
+
+  async function handleUpdate(id: string) {
+    const { data, error } = await updateLabelAction(projectId, id, editName.trim(), editColor)
+    if (error || !data) { toast(error ?? 'Error', 'error'); return }
+    setLabels((prev) => prev.map((l) => l.id === id ? data : l).sort((a, b) => a.name.localeCompare(b.name)))
+    setEditId(null)
+    toast('Label updated.', 'success')
+    refresh()
+  }
+
+  async function handleDelete(id: string) {
+    const { error } = await deleteLabelAction(projectId, id)
+    if (error) { toast(error, 'error'); return }
+    setLabels((prev) => prev.filter((l) => l.id !== id))
+    toast('Label deleted.', 'success')
+    refresh()
+  }
+
+  return (
+    <div className="space-y-2">
+      {labels.map((label) => (
+        <div key={label.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+          {editId === label.id ? (
+            <>
+              <input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="h-7 w-7 rounded cursor-pointer border border-gray-200 p-0.5" />
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleUpdate(label.id); if (e.key === 'Escape') setEditId(null) }}
+                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button onClick={() => handleUpdate(label.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check size={14} /></button>
+              <button onClick={() => setEditId(null)} className="p-1 text-gray-400 hover:bg-gray-100 rounded"><X size={14} /></button>
+            </>
+          ) : (
+            <>
+              <span className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
+              <span
+                className="flex-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: label.color + '22', color: label.color }}
+              >
+                {label.name}
+              </span>
+              <button onClick={() => { setEditId(label.id); setEditName(label.name); setEditColor(label.color) }} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil size={13} /></button>
+              <button onClick={() => handleDelete(label.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+            </>
+          )}
+        </div>
+      ))}
+
+      <div className="flex items-center gap-2 pt-2">
+        <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-7 w-7 rounded cursor-pointer border border-gray-200 p-0.5" />
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleCreate() }}
+          placeholder="New label name…"
           className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
         />
         <button

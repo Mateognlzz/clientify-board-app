@@ -16,3 +16,11 @@ export interface ProjectIssueType {
   position: number
   created_at: string
 }
+
+export interface ProjectLabel {
+  id: string
+  project_id: string
+  name: string
+  color: string
+  created_at: string
+}

@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { ServiceResult } from '@/types/common.types'
 import type { Issue, IssueCreate, IssueUpdate, IssueWithDetails } from '@/types/issue.types'
+import type { ProjectLabel } from '@/types/project-settings.types'
 import type { JSONContent } from '@tiptap/core'
 import { extractStoragePaths, COMMENT_IMAGES_BUCKET } from '@/lib/utils/storage'
 
@@ -34,6 +35,7 @@ type RawIssue = {
   reporter: { id: string; full_name: string | null; avatar_url: string | null } | null
   epic: { id: string; name: string; color: string } | null
   comments: { count: number }[]
+  issue_labels: { label: ProjectLabel }[] | null
 }
 
 export async function getIssues(
@@ -47,7 +49,8 @@ export async function getIssues(
       assignee:profiles!issues_assignee_id_fkey(id, full_name, avatar_url),
       reporter:profiles!issues_reporter_id_fkey(id, full_name, avatar_url),
       epic:epics(id, name, color),
-      comments(count)
+      comments(count),
+      issue_labels(label:project_labels(id, name, color, project_id, created_at))
     `)
     .eq('project_id', projectId)
     .order('position', { ascending: true })
@@ -80,6 +83,7 @@ export async function getIssues(
     reporter: row.reporter ?? { id: row.reporter_id, full_name: null, avatar_url: null },
     epic: row.epic,
     comment_count: row.comments?.[0]?.count ?? 0,
+    labels: (row.issue_labels ?? []).map((il) => il.label),
   }))
 
   return { data: issues, error: null }
@@ -96,7 +100,8 @@ export async function getIssueById(
       assignee:profiles!issues_assignee_id_fkey(id, full_name, avatar_url),
       reporter:profiles!issues_reporter_id_fkey(id, full_name, avatar_url),
       epic:epics(id, name, color),
-      comments(count)
+      comments(count),
+      issue_labels(label:project_labels(id, name, color, project_id, created_at))
     `)
     .eq('id', issueId)
     .single()
@@ -129,6 +134,7 @@ export async function getIssueById(
       reporter: row.reporter ?? { id: row.reporter_id, full_name: null, avatar_url: null },
       epic: row.epic,
       comment_count: row.comments?.[0]?.count ?? 0,
+      labels: (row.issue_labels ?? []).map((il) => il.label),
     },
     error: null,
   }

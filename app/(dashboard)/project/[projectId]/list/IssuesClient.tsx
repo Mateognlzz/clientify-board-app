@@ -41,6 +41,7 @@ interface ActiveFilters {
   priorities: string[]
   types: string[]
   assigneeId: string
+  labels: string[]
 }
 
 interface IssuesClientProps {
@@ -59,7 +60,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { statuses: projectStatuses, types: projectTypes } = useProjectSettings()
+  const { statuses: projectStatuses, types: projectTypes, labels: projectLabels } = useProjectSettings()
   useRefreshOnFocus(() => setDetailTarget(null))
   useRealtimeRefresh(projectId)
 
@@ -107,7 +108,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
   }, [pathname, router, searchParams])
 
   const hasActiveFilters = filters.statuses.length > 0 || filters.priorities.length > 0 ||
-    filters.types.length > 0 || !!filters.assigneeId
+    filters.types.length > 0 || !!filters.assigneeId || filters.labels.length > 0
 
   const filtered = useMemo(() => {
     return localIssues.filter((i) => {
@@ -122,6 +123,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
         if (filters.assigneeId === 'unassigned' && i.assignee_id) return false
         if (filters.assigneeId !== 'unassigned' && i.assignee_id !== filters.assigneeId) return false
       }
+      if (filters.labels.length && !filters.labels.some((id) => i.labels?.some((l) => l.id === id))) return false
       return true
     })
   }, [localIssues, search, filters])
@@ -198,7 +200,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
   }
 
   function clearFilters() {
-    applyFilters({ statuses: [], priorities: [], types: [], assigneeId: '' })
+    applyFilters({ statuses: [], priorities: [], types: [], assigneeId: '', labels: [] })
   }
 
   return (
@@ -238,6 +240,15 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
           selected={filters.types}
           onChange={(v) => applyFilters({ ...filters, types: v })}
         />
+
+        {projectLabels.length > 0 && (
+          <FilterDropdown
+            label="Label"
+            options={projectLabels.map((l) => ({ value: l.id, label: l.name }))}
+            selected={filters.labels}
+            onChange={(v) => applyFilters({ ...filters, labels: v })}
+          />
+        )}
 
         {/* Assignee filter */}
         <select
@@ -314,6 +325,7 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Key</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[200px]">Summary</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">Parent</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">Labels</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Status</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Comments</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Sprint</th>
@@ -380,7 +392,10 @@ export function IssuesClient({ projectId, currentUserId, canDelete, issues, spri
             onEdit={() => openEdit(detailTarget)}
             onDelete={() => openDelete(detailTarget)}
             onUpdated={(patch) => {
-              setDetailTarget((prev) => prev ? { ...prev, ...patch } : prev)
+              const resolved = patch.label_ids !== undefined
+                ? { ...patch, labels: projectLabels.filter((l) => patch.label_ids!.includes(l.id)) }
+                : patch
+              setDetailTarget((prev) => prev ? { ...prev, ...resolved } : prev)
               router.refresh()
             }}
           />
@@ -460,6 +475,23 @@ function SortableIssueRow({
           >
             {issue.epic.name}
           </span>
+        ) : (
+          <span className="text-gray-300 text-xs">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {issue.labels?.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {issue.labels.map((l) => (
+              <span
+                key={l.id}
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ backgroundColor: l.color + '22', color: l.color }}
+              >
+                {l.name}
+              </span>
+            ))}
+          </div>
         ) : (
           <span className="text-gray-300 text-xs">—</span>
         )}

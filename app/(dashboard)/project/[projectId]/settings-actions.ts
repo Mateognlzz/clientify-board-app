@@ -13,9 +13,12 @@ import {
 import {
   createEpic, updateEpic, deleteEpic,
 } from '@/services/epics.service'
+import {
+  createProjectLabel, updateProjectLabel, deleteProjectLabel,
+} from '@/services/project-labels.service'
 import { deleteProject } from '@/services/projects.service'
 import type { ServiceResult } from '@/types/common.types'
-import type { ProjectStatus, ProjectIssueType } from '@/types/project-settings.types'
+import type { ProjectStatus, ProjectIssueType, ProjectLabel } from '@/types/project-settings.types'
 import type { Epic } from '@/types/epic.types'
 
 async function requireOwner(projectId: string) {
@@ -170,6 +173,41 @@ export async function reorderTypesAction(
   ))
   revalidateProject(projectId)
   return { data: null, error: null }
+}
+
+// ── LABELS ───────────────────────────────────────────────────────────────────
+
+export async function createLabelAction(
+  projectId: string, name: string, color: string,
+): Promise<ServiceResult<ProjectLabel>> {
+  const { error } = await requireOwner(projectId)
+  if (error) return { data: null, error }
+  const supabase = createAdminClient()
+  const result = await createProjectLabel(supabase, projectId, name, color)
+  if (!result.error) revalidateProject(projectId)
+  return result
+}
+
+export async function updateLabelAction(
+  projectId: string, id: string, name: string, color: string,
+): Promise<ServiceResult<ProjectLabel>> {
+  const { error } = await requireOwner(projectId)
+  if (error) return { data: null, error }
+  const supabase = createAdminClient()
+  const result = await updateProjectLabel(supabase, id, { name, color })
+  if (!result.error) revalidateProject(projectId)
+  return result
+}
+
+export async function deleteLabelAction(
+  projectId: string, id: string,
+): Promise<ServiceResult<null>> {
+  const { error } = await requireOwner(projectId)
+  if (error) return { data: null, error }
+  const supabase = createAdminClient()
+  const result = await deleteProjectLabel(supabase, id)
+  if (!result.error) revalidateProject(projectId)
+  return result
 }
 
 // ── PROJECT ───────────────────────────────────────────────────────────────────

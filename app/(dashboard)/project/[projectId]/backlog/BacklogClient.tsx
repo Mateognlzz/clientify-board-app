@@ -50,7 +50,7 @@ interface Props {
 export function BacklogClient({ projectId, currentUserId, canDelete, issues, sprints: initialSprints, members, epics: initialEpics }: Props) {
   const router = useRouter()
   const { toast } = useToast()
-  const { statuses: projectStatuses, types: projectTypes } = useProjectSettings()
+  const { statuses: projectStatuses, types: projectTypes, labels: projectLabels } = useProjectSettings()
   useRefreshOnFocus(() => setDetailTarget(null))
   useRealtimeRefresh(projectId)
 
@@ -74,8 +74,9 @@ export function BacklogClient({ projectId, currentUserId, canDelete, issues, spr
   const [filterStatuses, setFilterStatuses] = useState<string[]>([])
   const [filterPriorities, setFilterPriorities] = useState<IssuePriority[]>([])
   const [filterEpics, setFilterEpics] = useState<string[]>([])
+  const [filterLabels, setFilterLabels] = useState<string[]>([])
 
-  const hasFilters = filterAssignees.length > 0 || filterTypes.length > 0 || filterStatuses.length > 0 || filterPriorities.length > 0 || filterEpics.length > 0
+  const hasFilters = filterAssignees.length > 0 || filterTypes.length > 0 || filterStatuses.length > 0 || filterPriorities.length > 0 || filterEpics.length > 0 || filterLabels.length > 0
 
   const filteredIssues = useMemo(() => {
     return allIssues.filter((issue) => {
@@ -84,9 +85,10 @@ export function BacklogClient({ projectId, currentUserId, canDelete, issues, spr
       if (filterStatuses.length > 0 && !filterStatuses.includes(issue.status)) return false
       if (filterPriorities.length > 0 && !filterPriorities.includes(issue.priority)) return false
       if (filterEpics.length > 0 && !filterEpics.includes(issue.epic_id ?? '__none__')) return false
+      if (filterLabels.length > 0 && !filterLabels.some((id) => issue.labels?.some((l) => l.id === id))) return false
       return true
     })
-  }, [allIssues, filterAssignees, filterTypes, filterStatuses, filterPriorities, filterEpics])
+  }, [allIssues, filterAssignees, filterTypes, filterStatuses, filterPriorities, filterEpics, filterLabels])
 
   // Sprint modals
   const [sprintFormOpen, setSprintFormOpen] = useState(false)
@@ -362,9 +364,17 @@ export function BacklogClient({ projectId, currentUserId, canDelete, issues, spr
             selected={filterEpics}
             onChange={setFilterEpics}
           />
+          {projectLabels.length > 0 && (
+            <FilterDropdown
+              label="Label"
+              options={projectLabels.map((l) => ({ value: l.id, label: l.name, color: l.color }))}
+              selected={filterLabels}
+              onChange={setFilterLabels}
+            />
+          )}
           {hasFilters && (
             <button
-              onClick={() => { setFilterAssignees([]); setFilterTypes([]); setFilterStatuses([]); setFilterPriorities([]); setFilterEpics([]) }}
+              onClick={() => { setFilterAssignees([]); setFilterTypes([]); setFilterStatuses([]); setFilterPriorities([]); setFilterEpics([]); setFilterLabels([]) }}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors px-2 py-1.5"
             >
               <X size={12} /> Clear filters
@@ -488,8 +498,11 @@ export function BacklogClient({ projectId, currentUserId, canDelete, issues, spr
               onEdit={() => { setDetailTarget(null); setEditIssueTarget(detailTarget) }}
               onDelete={() => { setDetailTarget(null); setDeleteIssueTarget(detailTarget) }}
               onUpdated={(patch) => {
-                setDetailTarget((prev) => prev ? { ...prev, ...patch } : prev)
-                setAllIssues((prev) => prev.map((i) => i.id === detailTarget.id ? { ...i, ...patch } : i))
+                const resolved = patch.label_ids !== undefined
+                  ? { ...patch, labels: projectLabels.filter((l) => patch.label_ids!.includes(l.id)) }
+                  : patch
+                setDetailTarget((prev) => prev ? { ...prev, ...resolved } : prev)
+                setAllIssues((prev) => prev.map((i) => i.id === detailTarget.id ? { ...i, ...resolved } : i))
               }}
             />
           )}
@@ -784,6 +797,15 @@ function DraggableIssueRow({
           {issue.epic.name}
         </span>
       )}
+      {issue.labels?.map((label) => (
+        <span
+          key={label.id}
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 hidden md:inline-flex"
+          style={{ backgroundColor: label.color + '22', color: label.color }}
+        >
+          {label.name}
+        </span>
+      ))}
 
       <div className="flex items-center gap-2 shrink-0">
         {issue.due_date && (
@@ -872,6 +894,7 @@ interface FilterOption {
   value: string
   label: string
   avatarUrl?: string | null
+  color?: string
 }
 
 function FilterDropdown({
@@ -970,7 +993,16 @@ function FilterDropdown({
                       </div>
                     )
                   )}
-                  <span className="truncate">{option.label}</span>
+                  {option.color ? (
+                    <span
+                      className="truncate text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: option.color + '22', color: option.color }}
+                    >
+                      {option.label}
+                    </span>
+                  ) : (
+                    <span className="truncate">{option.label}</span>
+                  )}
                 </button>
               )
             })}

@@ -50,7 +50,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initialIssues, sprints, members, epics }: KanbanBoardProps) {
   const router = useRouter()
   const { toast } = useToast()
-  const { statuses: projectStatuses } = useProjectSettings()
+  const { statuses: projectStatuses, labels: projectLabels } = useProjectSettings()
   useRefreshOnFocus(() => setDetailTarget(null))
   useRealtimeRefresh(projectId)
 
@@ -210,8 +210,11 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
             onEdit={() => { setDetailTarget(null); setEditTarget(detailTarget) }}
             onDelete={() => { setDetailTarget(null); setDeleteTarget(detailTarget) }}
             onUpdated={(patch) => {
-              setDetailTarget((prev) => prev ? { ...prev, ...patch } : prev)
-              setIssues((prev) => prev.map((i) => i.id === detailTarget.id ? { ...i, ...patch } : i))
+              const resolved = patch.label_ids !== undefined
+                ? { ...patch, labels: projectLabels.filter((l) => patch.label_ids!.includes(l.id)) }
+                : patch
+              setDetailTarget((prev) => prev ? { ...prev, ...resolved } : prev)
+              setIssues((prev) => prev.map((i) => i.id === detailTarget.id ? { ...i, ...resolved } : i))
             }}
           />
         )}
@@ -326,6 +329,19 @@ function KanbanCard({
         >
           {issue.epic.name}
         </span>
+      )}
+      {issue.labels?.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {issue.labels.map((label) => (
+            <span
+              key={label.id}
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+              style={{ backgroundColor: label.color + '22', color: label.color }}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
       )}
       <p className="text-sm font-medium text-gray-800 leading-snug line-clamp-2">{issue.title}</p>
       <div className="flex items-center justify-between mt-1">

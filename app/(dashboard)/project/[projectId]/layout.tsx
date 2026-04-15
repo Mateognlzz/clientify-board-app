@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getProject } from '@/services/projects.service'
 import { getProjectStatuses } from '@/services/project-statuses.service'
 import { getProjectTypes } from '@/services/project-types.service'
+import { getProjectLabels } from '@/services/project-labels.service'
 import { ProjectSettingsProvider } from '@/contexts/ProjectSettingsContext'
 import { ProjectNav } from '@/components/layout/ProjectNav'
 import { ProjectLayoutShell } from './ProjectLayoutShell'
@@ -25,9 +26,10 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   if (error || !project) redirect('/dashboard')
 
   const admin = createAdminClient()
-  const [{ data: statuses }, { data: types }] = await Promise.all([
+  const [{ data: statuses }, { data: types }, { data: labels }] = await Promise.all([
     getProjectStatuses(admin, projectId),
     getProjectTypes(admin, projectId),
+    getProjectLabels(admin, projectId),
   ])
 
   const navItems = [
@@ -56,7 +58,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   return (
     <ProjectLayoutShell header={header}>
-      <ProjectSettingsProvider statuses={statuses ?? []} types={types ?? []}>
+      <ProjectSettingsProvider statuses={statuses ?? []} types={types ?? []} labels={labels ?? []}>
         {children}
       </ProjectSettingsProvider>
     </ProjectLayoutShell>

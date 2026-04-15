@@ -294,6 +294,67 @@ export type Database = {
           }
         ]
       }
+      project_labels: {
+        Row: {
+          id: string
+          project_id: string
+          name: string
+          color: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          name: string
+          color?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          name?: string
+          color?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'project_labels_project_id_fkey'
+            columns: ['project_id']
+            isOneToOne: false
+            referencedRelation: 'projects'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      issue_labels: {
+        Row: {
+          issue_id: string
+          label_id: string
+        }
+        Insert: {
+          issue_id: string
+          label_id: string
+        }
+        Update: {
+          issue_id?: string
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'issue_labels_issue_id_fkey'
+            columns: ['issue_id']
+            isOneToOne: false
+            referencedRelation: 'issues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'issue_labels_label_id_fkey'
+            columns: ['label_id']
+            isOneToOne: false
+            referencedRelation: 'project_labels'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       issues: {
         Row: {
           id: string

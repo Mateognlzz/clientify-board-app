@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEpics } from '@/services/epics.service'
 import { getProjectStatuses } from '@/services/project-statuses.service'
 import { getProjectTypes } from '@/services/project-types.service'
+import { getProjectLabels } from '@/services/project-labels.service'
 import { SettingsClient } from './SettingsClient'
 
 interface Props {
@@ -28,10 +29,11 @@ export default async function SettingsPage({ params }: Props) {
   if (member?.role !== 'owner') redirect(`/project/${projectId}/backlog`)
 
   const admin = createAdminClient()
-  const [{ data: epics }, { data: statuses }, { data: types }] = await Promise.all([
+  const [{ data: epics }, { data: statuses }, { data: types }, { data: labels }] = await Promise.all([
     getEpics(admin, projectId),
     getProjectStatuses(admin, projectId),
     getProjectTypes(admin, projectId),
+    getProjectLabels(admin, projectId),
   ])
 
   return (
@@ -42,6 +44,7 @@ export default async function SettingsPage({ params }: Props) {
         epics={epics ?? []}
         statuses={statuses ?? []}
         types={types ?? []}
+        labels={labels ?? []}
       />
     </div>
   )

@@ -1,29 +1,33 @@
 'use client'
 
 import { createContext, useContext } from 'react'
-import type { ProjectStatus, ProjectIssueType } from '@/types/project-settings.types'
+import type { ProjectStatus, ProjectIssueType, ProjectLabel } from '@/types/project-settings.types'
 
 interface ProjectSettingsContextValue {
   statuses: ProjectStatus[]
   types: ProjectIssueType[]
+  labels: ProjectLabel[]
 }
 
 const ProjectSettingsContext = createContext<ProjectSettingsContextValue>({
   statuses: [],
   types: [],
+  labels: [],
 })
 
 export function ProjectSettingsProvider({
   statuses,
   types,
+  labels,
   children,
 }: {
   statuses: ProjectStatus[]
   types: ProjectIssueType[]
+  labels: ProjectLabel[]
   children: React.ReactNode
 }) {
   return (
-    <ProjectSettingsContext.Provider value={{ statuses, types }}>
+    <ProjectSettingsContext.Provider value={{ statuses, types, labels }}>
       {children}
     </ProjectSettingsContext.Provider>
   )

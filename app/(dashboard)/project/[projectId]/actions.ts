@@ -9,6 +9,7 @@ import {
   updateIssue as updateIssueService,
   deleteIssue as deleteIssueService,
 } from '@/services/issues.service'
+import { setIssueLabels } from '@/services/project-labels.service'
 import type { IssueCreate, IssueUpdate, Issue } from '@/types/issue.types'
 import type { ServiceResult } from '@/types/common.types'
 import {
@@ -34,6 +35,11 @@ export async function createIssueAction(
   if (!result.error) {
     revalidatePath(`/project/${projectId}/list`)
     revalidatePath(`/project/${projectId}/backlog`)
+
+    // Set labels if provided
+    if (result.data && data.label_ids !== undefined) {
+      await setIssueLabels(supabase, result.data.id, data.label_ids)
+    }
 
     // Notify assignee if different from creator
     if (result.data && data.assignee_id && data.assignee_id !== user.id) {
@@ -71,6 +77,11 @@ export async function updateIssueAction(
     revalidatePath(`/project/${projectId}/list`)
     revalidatePath(`/project/${projectId}/backlog`)
     revalidatePath(`/project/${projectId}/board`)
+
+    // Set labels if provided
+    if (data.label_ids !== undefined) {
+      await setIssueLabels(supabase, issueId, data.label_ids)
+    }
 
     const newAssigneeId = result.data.assignee_id
 
@@ -120,6 +131,22 @@ export async function deleteIssueAction(
     revalidatePath(`/project/${projectId}/board`)
   }
 
+  return result
+}
+
+export async function setIssueLabelsAction(
+  projectId: string,
+  issueId: string,
+  labelIds: string[],
+): Promise<ServiceResult<null>> {
+  await getAuthenticatedUser()
+  const supabase = createAdminClient()
+  const result = await setIssueLabels(supabase, issueId, labelIds)
+  if (!result.error) {
+    revalidatePath(`/project/${projectId}/list`)
+    revalidatePath(`/project/${projectId}/backlog`)
+    revalidatePath(`/project/${projectId}/board`)
+  }
   return result
 }
 

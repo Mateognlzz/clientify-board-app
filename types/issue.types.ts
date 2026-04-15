@@ -1,3 +1,5 @@
+import type { ProjectLabel } from '@/types/project-settings.types'
+
 export type IssueStatus = 'todo' | 'in_progress' | 'in_review' | 'staging_qa' | 'ready_for_production' | 'done' | 'canceled' | 'stopper'
 export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest'
 export type IssueType = 'bug' | 'feature' | 'task' | 'improvement'
@@ -38,6 +40,7 @@ export interface IssueCreate {
   epic_id?: string | null
   slack_thread?: string | null
   pause_reason?: string | null
+  label_ids?: string[]
 }
 
 export interface IssueUpdate {
@@ -54,6 +57,7 @@ export interface IssueUpdate {
   epic_id?: string | null
   slack_thread?: string | null
   pause_reason?: string | null
+  label_ids?: string[]
 }
 
 export interface IssueWithDetails extends Issue {
@@ -61,4 +65,5 @@ export interface IssueWithDetails extends Issue {
   reporter: { id: string; full_name: string | null; avatar_url: string | null }
   epic: { id: string; name: string; color: string } | null
   comment_count: number
+  labels: ProjectLabel[]
 }

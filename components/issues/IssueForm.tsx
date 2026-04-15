@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { Tag } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ALL_PRIORITIES, priorityLabel } from '@/components/issues/PriorityIcon'
 import { RichTextEditor, parseDescription } from '@/components/issues/RichTextEditor'
@@ -8,6 +9,7 @@ import { uploadCommentImageAction } from '@/app/(dashboard)/project/[projectId]/
 import { useToast } from '@/providers/ToastProvider'
 import { useProjectSettings, formatSettingLabel } from '@/contexts/ProjectSettingsContext'
 import type { IssueCreate, IssueUpdate, IssueWithDetails, IssuePriority } from '@/types/issue.types'
+import type { ProjectLabel } from '@/types/project-settings.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import type { Epic } from '@/types/epic.types'
@@ -35,7 +37,7 @@ type IssueFormProps = (CreateModeProps | EditModeProps) & {
 
 export function IssueForm(props: IssueFormProps) {
   const { toast } = useToast()
-  const { statuses: projectStatuses, types: projectTypes } = useProjectSettings()
+  const { statuses: projectStatuses, types: projectTypes, labels: projectLabels } = useProjectSettings()
   const isEdit = props.mode === 'edit'
   const issue = isEdit ? (props as EditModeProps).issue : null
 
@@ -56,6 +58,7 @@ export function IssueForm(props: IssueFormProps) {
   const [epicId, setEpicId] = useState<string>(issue?.epic_id ?? '')
   const epics = props.epics ?? []
   const [slackThread, setSlackThread] = useState(issue?.slack_thread ?? '')
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(issue?.labels?.map((l) => l.id) ?? [])
   const [loading, setLoading] = useState(false)
   const [titleError, setTitleError] = useState('')
 
@@ -94,6 +97,7 @@ export function IssueForm(props: IssueFormProps) {
           sprint_id: sprintId || null,
           epic_id: epicId || null,
           slack_thread: slackThread || null,
+          label_ids: selectedLabelIds,
         })
       } else {
         const p = props as CreateModeProps
@@ -108,6 +112,7 @@ export function IssueForm(props: IssueFormProps) {
           sprint_id: sprintId || null,
           epic_id: epicId || null,
           slack_thread: slackThread || null,
+          label_ids: selectedLabelIds,
         })
       }
     } finally {
@@ -229,6 +234,18 @@ export function IssueForm(props: IssueFormProps) {
         </select>
       </div>
 
+      {/* Labels */}
+      {projectLabels.length > 0 && (
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Labels</label>
+          <LabelPicker
+            labels={projectLabels}
+            selectedIds={selectedLabelIds}
+            onChange={setSelectedLabelIds}
+          />
+        </div>
+      )}
+
       {/* Due date */}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -269,6 +286,85 @@ export function IssueForm(props: IssueFormProps) {
         </Button>
       </div>
     </form>
+  )
+}
+
+// ── LabelPicker ───────────────────────────────────────────────────────────────
+
+function LabelPicker({
+  labels, selectedIds, onChange,
+}: {
+  labels: ProjectLabel[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function toggle(id: string) {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
+  }
+
+  const selected = labels.filter((l) => selectedIds.includes(l.id))
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 flex-wrap min-h-[32px] w-full px-2 py-1 border border-gray-300 rounded-lg text-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left"
+      >
+        {selected.length === 0 ? (
+          <span className="flex items-center gap-1 text-gray-400 text-xs"><Tag size={12} /> No labels</span>
+        ) : (
+          selected.map((l) => (
+            <span
+              key={l.id}
+              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-semibold"
+              style={{ backgroundColor: l.color + '22', color: l.color }}
+            >
+              {l.name}
+            </span>
+          ))
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto">
+          {labels.map((label) => {
+            const checked = selectedIds.includes(label.id)
+            return (
+              <button
+                key={label.id}
+                type="button"
+                onClick={() => toggle(label.id)}
+                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors"
+              >
+                <span
+                  className={`h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors`}
+                  style={{ borderColor: label.color, backgroundColor: checked ? label.color : 'transparent' }}
+                >
+                  {checked && <span className="text-white text-[9px] font-bold">✓</span>}
+                </span>
+                <span
+                  className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: label.color + '22', color: label.color }}
+                >
+                  {label.name}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 

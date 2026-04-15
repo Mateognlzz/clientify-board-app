@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Trash2, Clock, ExternalLink, ChevronDown, Check, X } from 'lucide-react'
+import { Trash2, Clock, ExternalLink, ChevronDown, Check, X, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { TypeIcon } from '@/components/issues/TypeIcon'
 import { CommentSection, ImageLightbox } from '@/components/issues/CommentSection'
@@ -10,9 +10,10 @@ import { priorityLabel, ALL_PRIORITIES } from '@/components/issues/PriorityIcon'
 import { useProjectSettings, formatSettingLabel } from '@/contexts/ProjectSettingsContext'
 import { formatLocalDate } from '@/lib/utils/dates'
 import { useToast } from '@/providers/ToastProvider'
-import { updateIssueAction } from '@/app/(dashboard)/project/[projectId]/actions'
+import { updateIssueAction, setIssueLabelsAction } from '@/app/(dashboard)/project/[projectId]/actions'
 import { uploadCommentImageAction } from '@/app/(dashboard)/project/[projectId]/comment-actions'
 import type { IssueWithDetails, IssueStatus, IssuePriority, IssueUpdate } from '@/types/issue.types'
+import type { ProjectLabel } from '@/types/project-settings.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import type { Epic } from '@/types/epic.types'
@@ -52,7 +53,7 @@ export function IssueDetail({
   onUpdated,
 }: IssueDetailProps) {
   const { toast } = useToast()
-  const { statuses: projectStatuses } = useProjectSettings()
+  const { statuses: projectStatuses, labels: projectLabels } = useProjectSettings()
 
   // Select / date fields
   const [status, setStatus] = useState<IssueStatus>(issue.status)
@@ -74,6 +75,7 @@ export function IssueDetail({
   const [pauseReason, setPauseReason] = useState(issue.pause_reason ?? '')
   const [draftPause, setDraftPause] = useState(issue.pause_reason ?? '')
   const [epicId, setEpicId] = useState<string>(issue.epic_id ?? '')
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(issue.labels?.map((l) => l.id) ?? [])
 
   // Rich editor ref
   const getDescriptionJson = useRef<(() => JSONContent) | null>(null)
@@ -111,6 +113,21 @@ export function IssueDetail({
       setAssigneeId(prev.assigneeId); setDueDateRaw(prev.dueDateRaw); setStartDateRaw(prev.startDateRaw)
     } else {
       onUpdated(patch)
+    }
+  }
+
+  // ── labels handler ───────────────────────────────────────────────────────
+  async function handleLabelChange(newIds: string[]) {
+    const prev = selectedLabelIds
+    setSelectedLabelIds(newIds)
+    setSaving('labels')
+    const { error } = await setIssueLabelsAction(projectId, issue.id, newIds)
+    setSaving(null)
+    if (error) {
+      toast(error, 'error')
+      setSelectedLabelIds(prev)
+    } else {
+      onUpdated({ label_ids: newIds } as Partial<IssueUpdate>)
     }
   }
 
@@ -422,6 +439,19 @@ export function IssueDetail({
           <UserChip person={issue.reporter} fallback="Unknown" />
         </div>
 
+        {/* Labels */}
+        {projectLabels.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Labels</p>
+            <InlineLabelPicker
+              labels={projectLabels}
+              selectedIds={selectedLabelIds}
+              saving={saving === 'labels'}
+              onChange={handleLabelChange}
+            />
+          </div>
+        )}
+
         {/* Details container */}
         <div className="rounded-lg border border-gray-200 overflow-hidden">
           <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
@@ -593,6 +623,87 @@ function UserChip({ person, fallback }: {
           </div>
       }
       <span className="text-sm text-gray-700">{person.full_name ?? 'Unknown'}</span>
+    </div>
+  )
+}
+
+// ── InlineLabelPicker ─────────────────────────────────────────────────────────
+
+function InlineLabelPicker({
+  labels, selectedIds, saving, onChange,
+}: {
+  labels: ProjectLabel[]
+  selectedIds: string[]
+  saving: boolean
+  onChange: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function toggle(id: string) {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
+  }
+
+  const selected = labels.filter((l) => selectedIds.includes(l.id))
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={saving}
+        className="flex items-center gap-1 flex-wrap min-h-[28px] w-full text-left disabled:opacity-50"
+      >
+        {selected.length === 0 ? (
+          <span className="flex items-center gap-1 text-xs text-gray-400 italic"><Tag size={11} /> None</span>
+        ) : (
+          selected.map((l) => (
+            <span
+              key={l.id}
+              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+              style={{ backgroundColor: l.color + '22', color: l.color }}
+            >
+              {l.name}
+            </span>
+          ))
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-20 right-0 mt-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto">
+          {labels.map((label) => {
+            const checked = selectedIds.includes(label.id)
+            return (
+              <button
+                key={label.id}
+                type="button"
+                onClick={() => toggle(label.id)}
+                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors"
+              >
+                <span
+                  className="h-3.5 w-3.5 rounded border-2 flex items-center justify-center shrink-0"
+                  style={{ borderColor: label.color, backgroundColor: checked ? label.color : 'transparent' }}
+                >
+                  {checked && <span className="text-white text-[8px] font-bold">✓</span>}
+                </span>
+                <span
+                  className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: label.color + '22', color: label.color }}
+                >
+                  {label.name}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
