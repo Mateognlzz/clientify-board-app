@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { AvatarCropper } from '@/components/ui/AvatarCropper'
 import { useToast } from '@/providers/ToastProvider'
 import { updateProfileAction, uploadAvatarAction, removeAvatarAction } from './actions'
+import { formatLocalDate } from '@/lib/utils/dates'
 import type { UserProfile } from '@/types/auth.types'
 
 interface SettingsClientProps {
@@ -195,7 +196,7 @@ export function SettingsClient({ profile }: SettingsClientProps) {
         <div className="mt-4 bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Account</h2>
           <div className="text-xs text-gray-400 space-y-1">
-            <p>Member since: {new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p>Member since: {formatLocalDate(profile.created_at)}</p>
             <p>User ID: <span className="font-mono">{profile.id}</span></p>
           </div>
         </div>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ExternalLink } from 'lucide-react'
+import { X, ExternalLink, Link2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
@@ -25,6 +25,18 @@ const SIZE_STYLES: Record<ModalSize, string> = {
 }
 
 export function Modal({ open, onClose, title, children, size = 'md', externalHref }: ModalProps) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    const url = externalHref
+      ? `${window.location.origin}${externalHref}`
+      : window.location.href
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   useEffect(() => {
     if (!open) return
 
@@ -65,12 +77,23 @@ export function Modal({ open, onClose, title, children, size = 'md', externalHre
         )}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2
-            id="modal-title"
-            className="text-base font-semibold text-gray-900 truncate pr-4"
-          >
-            {title}
-          </h2>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h2
+              id="modal-title"
+              className="text-base font-semibold text-gray-900 truncate"
+            >
+              {title}
+            </h2>
+            {externalHref && (
+              <button
+                onClick={handleCopy}
+                className="p-1 rounded-md text-gray-400 hover:text-blue-600 hover:bg-gray-100 transition-colors shrink-0"
+                title="Copy link"
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Link2 size={14} />}
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1 shrink-0">
             {externalHref && (
               <a

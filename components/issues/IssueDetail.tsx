@@ -8,6 +8,7 @@ import { CommentSection, ImageLightbox } from '@/components/issues/CommentSectio
 import { RichTextEditor, renderDescriptionHTML, parseDescription } from '@/components/issues/RichTextEditor'
 import { priorityLabel, ALL_PRIORITIES } from '@/components/issues/PriorityIcon'
 import { useProjectSettings, formatSettingLabel } from '@/contexts/ProjectSettingsContext'
+import { formatLocalDate } from '@/lib/utils/dates'
 import { useToast } from '@/providers/ToastProvider'
 import { updateIssueAction } from '@/app/(dashboard)/project/[projectId]/actions'
 import { uploadCommentImageAction } from '@/app/(dashboard)/project/[projectId]/comment-actions'
@@ -83,8 +84,8 @@ export function IssueDetail({
   })()
   const isOverdue = !!dueDateRaw && dueDateRaw < todayStr
 
-  const createdAt = new Date(issue.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-  const updatedAt = new Date(issue.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  const createdAt = formatLocalDate(issue.created_at)
+  const updatedAt = formatLocalDate(issue.updated_at)
 
   // ── select/date handler ───────────────────────────────────────────────────
   async function handleChange(field: string, value: string) {

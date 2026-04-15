@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/providers/ToastProvider'
 import type { CommentWithAuthor } from '@/types/comment.types'
 import type { JSONContent } from '@tiptap/core'
+import { formatDateTime } from '@/lib/utils/dates'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import { MentionList, type MentionListHandle } from '@/components/issues/MentionList'
 import {
@@ -333,9 +334,7 @@ function CommentItem({
     ? comment.author.full_name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
     : comment.author.email[0]?.toUpperCase() ?? '?'
 
-  const date = new Date(comment.created_at).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
+  const date = formatDateTime(comment.created_at)
 
   async function handleDelete() {
     const { error } = await deleteCommentAction(comment.id)

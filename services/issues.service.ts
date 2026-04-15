@@ -150,6 +150,7 @@ export async function createIssue(
       type: data.type ?? 'task',
       assignee_id: data.assignee_id ?? null,
       reporter_id: userId,
+      start_date: new Date().toISOString().slice(0, 10),
       due_date: data.due_date ?? null,
       ...(data.sprint_id !== undefined && { sprint_id: data.sprint_id }),
       epic_id: data.epic_id ?? null,

@@ -1,26 +1,42 @@
-import { formatDistanceToNow, format, parseISO, isPast } from 'date-fns'
+import { formatDistanceToNow, format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+/**
+ * Relative time (e.g. "hace 3 minutos") — uses browser local time.
+ */
 export function formatRelativeDate(dateString: string): string {
-  return formatDistanceToNow(parseISO(dateString), {
+  return formatDistanceToNow(new Date(dateString), {
     addSuffix: true,
     locale: es,
   })
 }
 
+/**
+ * Calendar date only (e.g. "15 abr 2026") — for due_date/sprint dates
+ * which are date-only strings with no timezone component.
+ */
 export function formatDate(dateString: string): string {
-  // Split off any time component so DATE-only strings stay in local time
   const [y, m, d] = dateString.split('T')[0].split('-').map(Number)
   return format(new Date(y, m - 1, d), 'dd MMM yyyy', { locale: es })
 }
 
+/**
+ * Full timestamp in the user's local timezone (e.g. "15 abr 2026 18:32")
+ * — for created_at, updated_at, comment timestamps.
+ */
 export function formatDateTime(dateString: string): string {
-  return format(parseISO(dateString), 'dd MMM yyyy HH:mm', { locale: es })
+  return format(new Date(dateString), 'dd MMM yyyy HH:mm', { locale: es })
+}
+
+/**
+ * Short date in local timezone (e.g. "15 abr 2026") — for created_at/updated_at
+ * when time is not needed.
+ */
+export function formatLocalDate(dateString: string): string {
+  return format(new Date(dateString), 'dd MMM yyyy', { locale: es })
 }
 
 export function isOverdue(dueDateString: string): boolean {
-  // Jira-style: compare calendar dates as strings (no timezone conversion)
-  // A ticket due today is NOT overdue — only strictly past dates are
   const due = dueDateString.split('T')[0]
   const now = new Date()
   const today = [

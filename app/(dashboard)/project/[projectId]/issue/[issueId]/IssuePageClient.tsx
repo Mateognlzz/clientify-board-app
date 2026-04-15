@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Link2, Check } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { IssueDetail } from '@/components/issues/IssueDetail'
@@ -25,6 +26,7 @@ export function IssuePageClient({ issue: initialIssue, projectId, currentUserId,
   const { toast } = useToast()
 
   const [issue, setIssue] = useState<IssueWithDetails>(initialIssue)
+  const [copied, setCopied] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -51,7 +53,21 @@ export function IssuePageClient({ issue: initialIssue, projectId, currentUserId,
   return (
     <>
       {/* Page title */}
-      <h1 className="text-xl font-semibold text-gray-900 mb-6">{issue.key}</h1>
+      <div className="flex items-center gap-2 mb-6">
+        <h1 className="text-xl font-semibold text-gray-900">{issue.key}</h1>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+              setCopied(true)
+              setTimeout(() => setCopied(false), 2000)
+            })
+          }}
+          title="Copy link"
+          className="p-1 rounded-md text-gray-400 hover:text-blue-600 hover:bg-gray-100 transition-colors"
+        >
+          {copied ? <Check size={16} className="text-green-500" /> : <Link2 size={16} />}
+        </button>
+      </div>
 
       {/* Issue detail */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">

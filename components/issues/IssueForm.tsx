@@ -51,7 +51,6 @@ export function IssueForm(props: IssueFormProps) {
   const [priority, setPriority] = useState<IssuePriority>(issue?.priority ?? 'medium')
   const [type, setType] = useState<string>(issue?.type ?? defaultType)
   const [assigneeId, setAssigneeId] = useState<string>(issue?.assignee_id ?? '')
-  const [startDate, setStartDate] = useState(issue?.start_date ?? '')
   const [dueDate, setDueDate] = useState(issue?.due_date ?? '')
   const [sprintId] = useState<string>(issue?.sprint_id ?? props.defaultSprintId ?? '')
   const [epicId, setEpicId] = useState<string>(issue?.epic_id ?? '')
@@ -91,7 +90,6 @@ export function IssueForm(props: IssueFormProps) {
           priority,
           type: type as IssueUpdate['type'],
           assignee_id: assigneeId || null,
-          start_date: startDate || null,
           due_date: dueDate || null,
           sprint_id: sprintId || null,
           epic_id: epicId || null,
@@ -106,7 +104,6 @@ export function IssueForm(props: IssueFormProps) {
           priority,
           type: type as IssueCreate['type'],
           assignee_id: assigneeId || undefined,
-          start_date: startDate || null,
           due_date: dueDate || undefined,
           sprint_id: sprintId || null,
           epic_id: epicId || null,
@@ -232,32 +229,18 @@ export function IssueForm(props: IssueFormProps) {
         </select>
       </div>
 
-      {/* Start date / Due date */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Start date <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm
-                       focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Due date <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm
-                       focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      {/* Due date */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Due date <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm
+                     focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
       {/* Slack Thread */}
