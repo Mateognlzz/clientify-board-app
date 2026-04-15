@@ -18,6 +18,7 @@ import type { JSONContent } from '@tiptap/core'
 interface CreateModeProps {
   mode: 'create'
   projectId: string
+  defaultStatus?: string
   onSubmit: (data: IssueCreate) => Promise<void>
 }
 
@@ -45,7 +46,7 @@ export function IssueForm(props: IssueFormProps) {
     ? projectStatuses
     : projectStatuses.filter((s) => !s.requires_pause_reason)
 
-  const defaultStatus = availableStatuses[0]?.name ?? 'todo'
+  const defaultStatus = (isEdit ? null : (props as CreateModeProps).defaultStatus) ?? availableStatuses[0]?.name ?? 'todo'
   const defaultType = projectTypes[0]?.name ?? 'task'
 
   const [title, setTitle] = useState(issue?.title ?? '')

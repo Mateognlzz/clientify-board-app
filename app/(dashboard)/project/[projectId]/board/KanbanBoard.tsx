@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { SlidersHorizontal, X, ChevronRight, Search, User } from 'lucide-react'
+import { SlidersHorizontal, X, ChevronRight, ChevronDown, Search, User, Plus, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -33,7 +33,7 @@ import type { IssueWithDetails, IssueUpdate } from '@/types/issue.types'
 import type { ProjectMemberPreview } from '@/services/projects.service'
 import type { Sprint } from '@/types/sprint.types'
 import type { Epic } from '@/types/epic.types'
-import { updateIssueAction, deleteIssueAction } from '../actions'
+import { updateIssueAction, deleteIssueAction, createIssueAction } from '../actions'
 import { useRefreshOnFocus } from '@/lib/hooks/useRefreshOnFocus'
 import { useRealtimeRefresh } from '@/lib/hooks/useRealtimeRefresh'
 
@@ -58,6 +58,8 @@ interface BoardFilters {
 
 const EMPTY_FILTERS: BoardFilters = { sprints: [], assignees: [], labels: [], priorities: [], types: [] }
 
+type GroupBy = 'none' | 'assignee' | 'epic'
+
 export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initialIssues, sprints, members, epics }: KanbanBoardProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -68,6 +70,16 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
   const [issues, setIssues] = useState<IssueWithDetails[]>(initialIssues)
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
   const [searchQuery, setSearchQuery] = useState('')
+  const [groupBy, setGroupBy] = useState<GroupBy>('none')
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+
+  function toggleGroup(id: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   useEffect(() => { setIssues(initialIssues) }, [initialIssues])
   useEffect(() => {
@@ -81,6 +93,7 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
   const [editTarget, setEditTarget] = useState<IssueWithDetails | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<IssueWithDetails | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [createStatus, setCreateStatus] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -144,6 +157,43 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
     setFilters((prev) => ({ ...prev, [field]: prev[field].filter((v) => v !== value) }))
   }
 
+  // ── Groups (swimlanes) ──────────────────────────────────────────────────────
+
+  const groups = useMemo(() => {
+    if (groupBy === 'none') return []
+    const seen = new Set<string>()
+    const result: { id: string; label: string; color?: string; avatarUrl?: string | null }[] = []
+
+    if (groupBy === 'assignee') {
+      if (boardIssues.some((i) => !i.assignee_id))
+        result.push({ id: '__unassigned__', label: 'Unassigned' })
+      boardIssues.forEach((i) => {
+        if (i.assignee_id && !seen.has(i.assignee_id)) {
+          seen.add(i.assignee_id)
+          result.push({ id: i.assignee_id, label: i.assignee?.full_name ?? i.assignee_id, avatarUrl: i.assignee?.avatar_url ?? null })
+        }
+      })
+    } else {
+      if (boardIssues.some((i) => !i.epic_id))
+        result.push({ id: '__none__', label: 'No epic' })
+      boardIssues.forEach((i) => {
+        if (i.epic_id && !seen.has(i.epic_id)) {
+          seen.add(i.epic_id)
+          result.push({ id: i.epic_id, label: i.epic?.name ?? i.epic_id, color: i.epic?.color })
+        }
+      })
+    }
+    return result
+  }, [groupBy, boardIssues])
+
+  function getGroupIssues(groupId: string, statusName: string) {
+    return boardIssues.filter((i) => {
+      if (i.status !== statusName) return false
+      if (groupBy === 'assignee') return (i.assignee_id ?? '__unassigned__') === groupId
+      return (i.epic_id ?? '__none__') === groupId
+    })
+  }
+
   // ── DnD ─────────────────────────────────────────────────────────────────────
 
   function handleDragStart({ active }: DragStartEvent) {
@@ -156,7 +206,9 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
       setActiveIssue(null)
       if (!over) return
       const issue = issues.find((i) => i.id === active.id)
-      const newStatus = over.id as string
+      // droppable IDs in swimlane mode are "groupId||statusName"
+      const overId = over.id as string
+      const newStatus = overId.includes('||') ? overId.split('||')[1] : overId
       if (!issue || issue.status === newStatus) return
 
       const targetStatus = projectStatuses.find((s) => s.name === newStatus)
@@ -194,6 +246,14 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
       router.refresh()
     }
     setDeleteLoading(false)
+  }
+
+  async function handleCreate(data: import('@/types/issue.types').IssueCreate) {
+    const { error } = await createIssueAction(projectId, data)
+    if (error) { toast(error, 'error'); return }
+    toast('Ticket created.', 'success')
+    setCreateStatus(null)
+    router.refresh()
   }
 
   return (
@@ -239,6 +299,9 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
           priorities={ALL_PRIORITIES}
           hasFilters={hasFilters}
         />
+
+        {/* Group button */}
+        <GroupButton groupBy={groupBy} onChange={setGroupBy} />
       </div>
 
       {activeChips.length > 0 && (
@@ -270,17 +333,80 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
         onDragEnd={handleDragEnd}
       >
 
-        {/* Board columns */}
-        <div className="flex gap-3 px-6 py-4 overflow-x-auto pb-8 items-stretch">
-          {projectStatuses.map((s) => (
-            <KanbanColumn
-              key={s.id}
-              status={s}
-              issues={issuesByStatus[s.name] ?? []}
-              onCardClick={setDetailTarget}
-            />
-          ))}
-        </div>
+        {groupBy === 'none' ? (
+          /* ── Regular column layout ── */
+          <div className="flex gap-3 px-6 py-4 overflow-x-auto pb-8 items-stretch">
+            {projectStatuses.map((s) => (
+              <KanbanColumn
+                key={s.id}
+                status={s}
+                issues={issuesByStatus[s.name] ?? []}
+                onCardClick={setDetailTarget}
+                onCreateClick={() => setCreateStatus(s.name)}
+              />
+            ))}
+          </div>
+        ) : (
+          /* ── Swimlane layout ── */
+          <div className="px-6 pb-8 overflow-x-auto">
+            {groups.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-12">No tickets match current filters.</p>
+            ) : groups.map((group) => {
+              const isCollapsed = collapsedGroups.has(group.id)
+              const groupCount = boardIssues.filter((i) =>
+                groupBy === 'assignee'
+                  ? (i.assignee_id ?? '__unassigned__') === group.id
+                  : (i.epic_id ?? '__none__') === group.id
+              ).length
+              const initials = group.label.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
+              return (
+                <div key={group.id} className="mt-4">
+                  {/* Group header — clickable to collapse */}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    className="flex items-center gap-2 py-1.5 px-1 mb-2 rounded-lg hover:bg-gray-100 transition-colors w-full text-left"
+                  >
+                    <ChevronRight
+                      size={14}
+                      className={cn('text-gray-400 transition-transform shrink-0', !isCollapsed && 'rotate-90')}
+                    />
+                    {groupBy === 'assignee' && (
+                      group.avatarUrl
+                        ? <img src={group.avatarUrl} className="h-5 w-5 rounded-full object-cover shrink-0" alt="" />
+                        : <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                            <span className="text-[8px] font-bold text-white">{initials}</span>
+                          </div>
+                    )}
+                    {groupBy === 'epic' && (
+                      group.color
+                        ? <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
+                        : <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-gray-300" />
+                    )}
+                    <span className="text-sm font-semibold text-gray-800">{group.label}</span>
+                    <span className="text-xs text-gray-400">{groupCount} ticket{groupCount !== 1 ? 's' : ''}</span>
+                  </button>
+
+                  {/* Columns — hidden when collapsed */}
+                  {!isCollapsed && (
+                    <div className="flex gap-3 items-start">
+                      {projectStatuses.map((s) => (
+                        <KanbanColumn
+                          key={s.id}
+                          status={s}
+                          droppableId={`${group.id}||${s.name}`}
+                          issues={getGroupIssues(group.id, s.name)}
+                          onCardClick={setDetailTarget}
+                          onCreateClick={() => setCreateStatus(s.name)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         <DragOverlay dropAnimation={null}>
           {activeIssue && <KanbanCard issue={activeIssue} overlay />}
@@ -307,6 +433,23 @@ export function KanbanBoard({ projectId, currentUserId, canDelete, issues: initi
               setDetailTarget((prev) => prev ? { ...prev, ...resolved } : prev)
               setIssues((prev) => prev.map((i) => i.id === detailTarget.id ? { ...i, ...resolved } : i))
             }}
+          />
+        )}
+      </Modal>
+
+      {/* Create modal */}
+      <Modal open={createStatus !== null} onClose={() => setCreateStatus(null)} title="Create ticket" size="xl">
+        {createStatus !== null && (
+          <IssueForm
+            mode="create"
+            projectId={projectId}
+            defaultStatus={createStatus}
+            members={members}
+            sprints={sprints}
+            epics={epics}
+            defaultSprintId={null}
+            onSubmit={handleCreate}
+            onCancel={() => setCreateStatus(null)}
           />
         )}
       </Modal>
@@ -484,6 +627,69 @@ function AssigneeAvatars({
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── GroupButton ───────────────────────────────────────────────────────────────
+
+const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'assignee', label: 'Assignee' },
+  { value: 'epic', label: 'Epic' },
+]
+
+function GroupButton({ groupBy, onChange }: { groupBy: GroupBy; onChange: (g: GroupBy) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const active = GROUP_OPTIONS.find((o) => o.value === groupBy)!
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          'flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-colors',
+          groupBy !== 'none'
+            ? 'bg-blue-50 border-blue-300 text-blue-700'
+            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900'
+        )}
+      >
+        <Layers size={14} />
+        Group
+        {groupBy !== 'none' && (
+          <span className="text-blue-600 font-semibold text-xs">{active.label}</span>
+        )}
+        <ChevronDown size={12} className="text-gray-400" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-2 z-40 bg-white rounded-xl border border-gray-200 shadow-lg w-36 py-1">
+          {GROUP_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={cn(
+                'w-full flex items-center justify-between px-3 py-2 text-sm transition-colors',
+                groupBy === opt.value ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'
+              )}
+            >
+              {opt.label}
+              {groupBy === opt.value && <span className="text-[10px] font-bold text-blue-600">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -700,31 +906,42 @@ function JiraFilterButton({
 // ── Column ───────────────────────────────────────────────────────────────────
 
 function KanbanColumn({
-  status, issues, onCardClick,
+  status, issues, onCardClick, onCreateClick, droppableId, hideHeader = false,
 }: {
   status: ProjectStatus
   issues: IssueWithDetails[]
   onCardClick: (issue: IssueWithDetails) => void
+  onCreateClick: () => void
+  droppableId?: string
+  hideHeader?: boolean
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status.name })
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId ?? status.name })
 
   return (
     <div className={cn(
-      'flex flex-col w-[272px] shrink-0 rounded-xl border transition-colors',
+      'group flex flex-col w-[272px] shrink-0 rounded-xl border transition-colors',
       isOver ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'
     )}>
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
-        <StatusBadge status={status.name} color={status.color ?? undefined} />
-        <span className="ml-auto text-[11px] font-semibold text-gray-400 bg-white border border-gray-200 rounded-full px-1.5 py-0.5 leading-none">
-          {issues.length}
-        </span>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
+          <StatusBadge status={status.name} color={status.color ?? undefined} />
+          <span className="ml-auto text-[11px] font-semibold text-gray-400 bg-white border border-gray-200 rounded-full px-1.5 py-0.5 leading-none">
+            {issues.length}
+          </span>
+        </div>
+      )}
       <div ref={setNodeRef} className="flex flex-col gap-2 p-2 min-h-[80px] flex-1">
         {issues.map((issue) => (
           <KanbanCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />
         ))}
-        {issues.length === 0 && (
-          <p className="text-[11px] text-gray-300 text-center py-6 select-none">No issues</p>
+        {!status.requires_pause_reason && (
+          <button
+            onClick={onCreateClick}
+            className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+          >
+            <Plus size={13} />
+            Create
+          </button>
         )}
       </div>
     </div>
