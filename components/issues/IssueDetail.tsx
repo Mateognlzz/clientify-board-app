@@ -105,7 +105,8 @@ export function IssueDetail({
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })()
-  const isOverdue = !!dueDateRaw && dueDateRaw < todayStr
+  const currentStatusCompleted = projectStatuses.find(s => s.name === status)?.is_completed ?? false
+  const isOverdue = !!dueDateRaw && dueDateRaw < todayStr && !currentStatusCompleted
 
   const createdAt = formatLocalDate(issue.created_at)
   const updatedAt = formatLocalDate(issue.updated_at)

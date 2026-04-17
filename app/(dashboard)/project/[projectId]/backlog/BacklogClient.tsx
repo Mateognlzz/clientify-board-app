@@ -775,6 +775,7 @@ function DraggableIssueRow({
   onIssueClick: (i: IssueWithDetails) => void
   onMoveIssue: (i: IssueWithDetails, sprintId: string | null) => void
 }) {
+  const { statuses: projectStatuses } = useProjectSettings()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: issue.id })
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -831,13 +832,13 @@ function DraggableIssueRow({
         {issue.due_date && (
           <span className={cn(
             'text-[11px] font-medium flex items-center gap-1',
-            issue.due_date < new Date().toISOString().slice(0, 10) ? 'text-red-500' : 'text-gray-400'
+            issue.due_date < new Date().toISOString().slice(0, 10) && !projectStatuses.find(s => s.name === issue.status)?.is_completed ? 'text-red-500' : 'text-gray-400'
           )}>
             <Calendar size={11} />
             {formatDate(issue.due_date)}
           </span>
         )}
-        <StatusBadge status={issue.status} />
+        <StatusBadge status={issue.status} color={projectStatuses.find(s => s.name === issue.status)?.color ?? undefined} />
         <PriorityIcon priority={issue.priority} />
         {issue.assignee && (
           <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0" title={issue.assignee.full_name ?? ''}>
@@ -896,13 +897,14 @@ function DraggableIssueRow({
 // ── IssueRowGhost (drag overlay) ──────────────────────────────────────────────
 
 function IssueRowGhost({ issue }: { issue: IssueWithDetails }) {
+  const { statuses: projectStatuses } = useProjectSettings()
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-white border border-blue-300 rounded-lg shadow-lg opacity-95 max-w-2xl">
       <GripVertical size={14} className="text-gray-300 shrink-0" />
       <TypeIcon type={issue.type} />
       <span className="font-mono text-[11px] text-gray-400 w-16 shrink-0">{issue.key}</span>
       <span className="flex-1 text-sm text-gray-800 truncate font-medium">{issue.title}</span>
-      <StatusBadge status={issue.status} />
+      <StatusBadge status={issue.status} color={projectStatuses.find(s => s.name === issue.status)?.color ?? undefined} />
       <PriorityIcon priority={issue.priority} />
     </div>
   )

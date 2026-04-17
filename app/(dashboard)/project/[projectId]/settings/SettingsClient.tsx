@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Pencil, Check, X, ChevronUp, ChevronDown, PauseCircle } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X, ChevronUp, ChevronDown, PauseCircle, CheckCircle2, MoreHorizontal } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/providers/ToastProvider'
 import { formatSettingLabel } from '@/contexts/ProjectSettingsContext'
@@ -151,6 +151,7 @@ function EpicsManager({
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('#6366f1')
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState('#6366f1')
   const [loading, setLoading] = useState(false)
@@ -187,7 +188,7 @@ function EpicsManager({
 
   return (
     <div className="space-y-2">
-      {epics.map((epic) => (
+      {epics.map((epic, index) => (
         <div key={epic.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
           {editId === epic.id ? (
             <>
@@ -211,8 +212,34 @@ function EpicsManager({
               >
                 {epic.name}
               </span>
-              <button onClick={() => { setEditId(epic.id); setEditName(epic.name); setEditColor(epic.color) }} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil size={13} /></button>
-              <button onClick={() => handleDelete(epic.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpenId(menuOpenId === epic.id ? null : epic.id)}
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {menuOpenId === epic.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                    <div className={`absolute right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px] ${index >= epics.length - 2 ? 'bottom-7' : 'top-7'}`}>
+                      <button
+                        onClick={() => { setEditId(epic.id); setEditName(epic.name); setEditColor(epic.color); setMenuOpenId(null) }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <div className="border-t border-gray-100 my-1" />
+                      <button
+                        onClick={() => { handleDelete(epic.id); setMenuOpenId(null) }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -255,6 +282,8 @@ function StatusManager({
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('#6b7280')
   const [editPause, setEditPause] = useState(false)
+  const [editCompleted, setEditCompleted] = useState(false)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState('#6b7280')
   const [loading, setLoading] = useState(false)
@@ -274,7 +303,7 @@ function StatusManager({
   }
 
   async function handleUpdate(id: string) {
-    const { data, error } = await updateStatusAction(projectId, id, editName.trim(), editColor, editPause)
+    const { data, error } = await updateStatusAction(projectId, id, editName.trim(), editColor, editPause, editCompleted)
     if (error || !data) { toast(error ?? 'Error', 'error'); return }
     setStatuses((prev) => prev.map((s) => s.id === id ? data : s))
     setEditId(null)
@@ -283,7 +312,14 @@ function StatusManager({
   }
 
   async function handleTogglePause(status: ProjectStatus) {
-    const { data, error } = await updateStatusAction(projectId, status.id, status.name, status.color, !status.requires_pause_reason)
+    const { data, error } = await updateStatusAction(projectId, status.id, status.name, status.color, !status.requires_pause_reason, status.is_completed)
+    if (error || !data) { toast(error ?? 'Error', 'error'); return }
+    setStatuses((prev) => prev.map((s) => s.id === status.id ? data : s))
+    refresh()
+  }
+
+  async function handleToggleCompleted(status: ProjectStatus) {
+    const { data, error } = await updateStatusAction(projectId, status.id, status.name, status.color, status.requires_pause_reason, !status.is_completed)
     if (error || !data) { toast(error ?? 'Error', 'error'); return }
     setStatuses((prev) => prev.map((s) => s.id === status.id ? data : s))
     refresh()
@@ -326,6 +362,10 @@ function StatusManager({
                 <input type="checkbox" checked={editPause} onChange={(e) => setEditPause(e.target.checked)} className="rounded" />
                 Pause reason
               </label>
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none shrink-0">
+                <input type="checkbox" checked={editCompleted} onChange={(e) => setEditCompleted(e.target.checked)} className="rounded" />
+                Completed
+              </label>
               <button onClick={() => handleUpdate(status.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check size={14} /></button>
               <button onClick={() => setEditId(null)} className="p-1 text-gray-400 hover:bg-gray-100 rounded"><X size={14} /></button>
             </>
@@ -342,15 +382,50 @@ function StatusManager({
               >
                 {formatSettingLabel(status.name)}
               </span>
-              <button
-                onClick={() => handleTogglePause(status)}
-                title={status.requires_pause_reason ? 'Requires pause reason (click to disable)' : 'Does not require pause reason (click to enable)'}
-                className={`p-1 rounded transition-colors ${status.requires_pause_reason ? 'text-orange-500 bg-orange-50 hover:bg-orange-100' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'}`}
-              >
-                <PauseCircle size={14} />
-              </button>
-              <button onClick={() => { setEditId(status.id); setEditName(status.name); setEditColor(status.color); setEditPause(status.requires_pause_reason) }} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil size={13} /></button>
-              <button onClick={() => handleDelete(status.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+              <div className="flex items-center gap-1 shrink-0">
+                {status.requires_pause_reason && <PauseCircle size={12} className="text-red-500" />}
+                {status.is_completed && <CheckCircle2 size={12} className="text-green-500" />}
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuOpenId(menuOpenId === status.id ? null : status.id)}
+                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+                  {menuOpenId === status.id && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                      <div className={`absolute right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px] ${index >= statuses.length - 2 ? 'bottom-7' : 'top-7'}`}>
+                        <button
+                          onClick={() => { setEditId(status.id); setEditName(status.name); setEditColor(status.color); setEditPause(status.requires_pause_reason); setEditCompleted(status.is_completed); setMenuOpenId(null) }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => { handleTogglePause(status); setMenuOpenId(null) }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                        >
+                          {status.requires_pause_reason ? 'Remove pause reason' : 'Requires pause reason'}
+                        </button>
+                        <button
+                          onClick={() => { handleToggleCompleted(status); setMenuOpenId(null) }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                        >
+                          {status.is_completed ? 'Unmark as completed' : 'Mark as completed'}
+                        </button>
+                        <div className="border-t border-gray-100 my-1" />
+                        <button
+                          onClick={() => { handleDelete(status.id); setMenuOpenId(null) }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -398,6 +473,7 @@ function ItemManager<T extends ItemBase>({
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('#6b7280')
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState('#6b7280')
   const [loading, setLoading] = useState(false)
@@ -474,8 +550,34 @@ function ItemManager<T extends ItemBase>({
               >
                 {formatSettingLabel(item.name)}
               </span>
-              <button onClick={() => { setEditId(item.id); setEditName(item.name); setEditColor(item.color) }} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil size={13} /></button>
-              <button onClick={() => handleDelete(item.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpenId(menuOpenId === item.id ? null : item.id)}
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {menuOpenId === item.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                    <div className={`absolute right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px] ${index >= items.length - 2 ? 'bottom-7' : 'top-7'}`}>
+                      <button
+                        onClick={() => { setEditId(item.id); setEditName(item.name); setEditColor(item.color); setMenuOpenId(null) }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <div className="border-t border-gray-100 my-1" />
+                      <button
+                        onClick={() => { handleDelete(item.id); setMenuOpenId(null) }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -517,6 +619,7 @@ function LabelsManager({
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('#6366f1')
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState('#6366f1')
   const [loading, setLoading] = useState(false)
@@ -553,7 +656,7 @@ function LabelsManager({
 
   return (
     <div className="space-y-2">
-      {labels.map((label) => (
+      {labels.map((label, index) => (
         <div key={label.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
           {editId === label.id ? (
             <>
@@ -577,8 +680,34 @@ function LabelsManager({
               >
                 {label.name}
               </span>
-              <button onClick={() => { setEditId(label.id); setEditName(label.name); setEditColor(label.color) }} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil size={13} /></button>
-              <button onClick={() => handleDelete(label.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpenId(menuOpenId === label.id ? null : label.id)}
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {menuOpenId === label.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                    <div className={`absolute right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px] ${index >= labels.length - 2 ? 'bottom-7' : 'top-7'}`}>
+                      <button
+                        onClick={() => { setEditId(label.id); setEditName(label.name); setEditColor(label.color); setMenuOpenId(null) }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <div className="border-t border-gray-100 my-1" />
+                      <button
+                        onClick={() => { handleDelete(label.id); setMenuOpenId(null) }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>

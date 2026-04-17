@@ -36,7 +36,8 @@ export function formatLocalDate(dateString: string): string {
   return format(new Date(dateString), 'dd MMM yyyy', { locale: es })
 }
 
-export function isOverdue(dueDateString: string): boolean {
+export function isOverdue(dueDateString: string, isCompleted = false): boolean {
+  if (isCompleted) return false
   const due = dueDateString.split('T')[0]
   const now = new Date()
   const today = [

@@ -231,6 +231,7 @@ export type Database = {
           color: string | null
           position: number
           requires_pause_reason: boolean
+          is_completed: boolean
           created_at: string
         }
         Insert: {
@@ -240,6 +241,7 @@ export type Database = {
           color?: string | null
           position?: number
           requires_pause_reason?: boolean
+          is_completed?: boolean
           created_at?: string
         }
         Update: {
@@ -249,6 +251,7 @@ export type Database = {
           color?: string | null
           position?: number
           requires_pause_reason?: boolean
+          is_completed?: boolean
         }
         Relationships: [
           {

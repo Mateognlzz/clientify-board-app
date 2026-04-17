@@ -5,6 +5,7 @@ export interface ProjectStatus {
   color: string
   position: number
   requires_pause_reason: boolean
+  is_completed: boolean
   created_at: string
 }
 

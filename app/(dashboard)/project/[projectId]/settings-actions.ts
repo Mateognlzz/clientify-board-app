@@ -91,13 +91,14 @@ export async function createStatusAction(
 }
 
 export async function updateStatusAction(
-  projectId: string, id: string, name: string, color: string, requiresPauseReason?: boolean,
+  projectId: string, id: string, name: string, color: string, requiresPauseReason?: boolean, isCompleted?: boolean,
 ): Promise<ServiceResult<ProjectStatus>> {
   const { error } = await requireOwner(projectId)
   if (error) return { data: null, error }
   const supabase = createAdminClient()
-  const updates: { name: string; color: string; requires_pause_reason?: boolean } = { name, color }
+  const updates: { name: string; color: string; requires_pause_reason?: boolean; is_completed?: boolean } = { name, color }
   if (requiresPauseReason !== undefined) updates.requires_pause_reason = requiresPauseReason
+  if (isCompleted !== undefined) updates.is_completed = isCompleted
   const result = await updateProjectStatus(supabase, id, updates)
   if (!result.error) revalidateProject(projectId)
   return result

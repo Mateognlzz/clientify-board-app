@@ -208,6 +208,11 @@ export async function createProject(
   await Promise.all([
     supabase.from('project_statuses').insert(
       DEFAULT_STATUSES.map((s) => ({ ...s, project_id: projectId }))
+    ).then(() =>
+      supabase.from('project_statuses')
+        .update({ is_completed: true })
+        .eq('project_id', projectId)
+        .eq('name', 'Done')
     ),
     supabase.from('project_issue_types').insert(
       DEFAULT_TYPES.map((t) => ({ ...t, project_id: projectId }))

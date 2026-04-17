@@ -583,6 +583,7 @@ function SortableIssueRow({
   onDetail: () => void
   disableDrag?: boolean
 }) {
+  const { statuses: projectStatuses } = useProjectSettings()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: issue.id, disabled: disableDrag })
   const style = { transform: CSS.Transform.toString(transform), transition }
   const sprint = sprints.find((s) => s.id === issue.sprint_id)
@@ -646,7 +647,7 @@ function SortableIssueRow({
           <span className="text-gray-300 text-xs">—</span>
         )}
       </td>
-      <td className="px-4 py-3"><StatusBadge status={issue.status} /></td>
+      <td className="px-4 py-3"><StatusBadge status={issue.status} color={projectStatuses.find(s => s.name === issue.status)?.color ?? undefined} /></td>
       <td className="px-4 py-3">
         <button
           onClick={onDetail}
@@ -672,7 +673,7 @@ function SortableIssueRow({
       <td className="px-4 py-3"><UserCell person={issue.assignee} fallback="Unassigned" /></td>
       <td className="px-4 py-3">
         {issue.due_date ? (
-          <span className={cn('text-xs', isOverdue(issue.due_date) ? 'text-red-500 font-medium' : 'text-gray-600')}>
+          <span className={cn('text-xs', isOverdue(issue.due_date, projectStatuses.find(s => s.name === issue.status)?.is_completed) ? 'text-red-500 font-medium' : 'text-gray-600')}>
             {formatDate(issue.due_date)}
           </span>
         ) : (
