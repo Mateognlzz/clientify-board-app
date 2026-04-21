@@ -23,7 +23,7 @@ export function LoginClient({ inviteToken, defaultEmail }: Props) {
     setError(null)
 
     if (!isValidEmail(email)) {
-      setError('Introduce un email válido.')
+      setError('Enter a valid email address.')
       return
     }
 
@@ -49,7 +49,7 @@ export function LoginClient({ inviteToken, defaultEmail }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">
-        Iniciar sesión
+        Sign in
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -67,13 +67,13 @@ export function LoginClient({ inviteToken, defaultEmail }: Props) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                        placeholder:text-gray-400"
-            placeholder="tu@email.com"
+            placeholder="you@email.com"
           />
         </div>
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Contraseña
+            Password
           </label>
           <input
             id="password"
@@ -102,17 +102,17 @@ export function LoginClient({ inviteToken, defaultEmail }: Props) {
                      hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed
                      transition-colors mt-2"
         >
-          {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+          {loading ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
-        ¿No tienes cuenta?{' '}
+        Don&apos;t have an account?{' '}
         <Link
           href={inviteToken ? `/register?inviteToken=${inviteToken}` : '/register'}
           className="text-blue-600 font-medium hover:underline"
         >
-          Regístrate gratis
+          Sign up for free
         </Link>
       </p>
     </div>
@@ -121,13 +121,13 @@ export function LoginClient({ inviteToken, defaultEmail }: Props) {
 
 function translateAuthError(message: string): string {
   if (message.includes('Invalid login credentials')) {
-    return 'Email o contraseña incorrectos.'
+    return 'Incorrect email or password.'
   }
   if (message.includes('Email not confirmed')) {
-    return 'Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.'
+    return 'Please confirm your email before signing in. Check your inbox.'
   }
   if (message.includes('Too many requests')) {
-    return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'
+    return 'Too many attempts. Please wait a few minutes and try again.'
   }
-  return 'Error al iniciar sesión. Inténtalo de nuevo.'
+  return 'Error signing in. Please try again.'
 }

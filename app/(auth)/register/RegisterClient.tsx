@@ -24,15 +24,15 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
     setError(null)
 
     if (!isNonEmptyString(fullName)) {
-      setError('Introduce tu nombre completo.')
+      setError('Please enter your full name.')
       return
     }
     if (!isValidEmail(email)) {
-      setError('Introduce un email válido.')
+      setError('Please enter a valid email address.')
       return
     }
     if (!isValidPassword(password)) {
-      setError('La contraseña debe tener al menos 6 caracteres.')
+      setError('Password must be at least 6 characters.')
       return
     }
 
@@ -64,16 +64,16 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
       <h2 className="text-xl font-semibold text-gray-900 mb-2">
-        Crear cuenta
+        Create account
       </h2>
       {inviteToken && (
-        <p className="text-sm text-blue-600 mb-5">Crea tu cuenta para aceptar la invitación.</p>
+        <p className="text-sm text-blue-600 mb-5">Create your account to accept the invitation.</p>
       )}
 
       <form onSubmit={handleSubmit} className={`space-y-4 ${!inviteToken ? 'mt-6' : ''}`} noValidate>
         <div>
           <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Nombre completo
+            Full name
           </label>
           <input
             id="fullName"
@@ -85,7 +85,7 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                        placeholder:text-gray-400"
-            placeholder="Juan García"
+            placeholder="John Smith"
           />
         </div>
 
@@ -104,13 +104,13 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
             className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                        placeholder:text-gray-400 ${defaultEmail ? 'bg-gray-50 text-gray-500' : ''}`}
-            placeholder="tu@email.com"
+            placeholder="you@email.com"
           />
         </div>
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Contraseña
+            Password
           </label>
           <input
             id="password"
@@ -123,7 +123,7 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                        placeholder:text-gray-400"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="At least 6 characters"
           />
         </div>
 
@@ -140,17 +140,17 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
                      hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed
                      transition-colors mt-2"
         >
-          {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+          {loading ? 'Creating account...' : 'Create account'}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
-        ¿Ya tienes cuenta?{' '}
+        Already have an account?{' '}
         <Link
           href={inviteToken ? `/login?inviteToken=${inviteToken}&email=${encodeURIComponent(email)}` : '/login'}
           className="text-blue-600 font-medium hover:underline"
         >
-          Inicia sesión
+          Sign in
         </Link>
       </p>
     </div>
@@ -159,13 +159,13 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
 
 function translateAuthError(message: string): string {
   if (message.includes('User already registered')) {
-    return 'Ya existe una cuenta con ese email. Intenta iniciar sesión.'
+    return 'An account with this email already exists. Try signing in.'
   }
   if (message.includes('Password should be at least')) {
-    return 'La contraseña debe tener al menos 6 caracteres.'
+    return 'Password must be at least 6 characters.'
   }
   if (message.includes('Unable to validate email')) {
-    return 'El email introducido no es válido.'
+    return 'The email address is not valid.'
   }
-  return 'Error al crear la cuenta. Inténtalo de nuevo.'
+  return 'Error creating account. Please try again.'
 }

@@ -13,34 +13,32 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
   const { token } = await searchParams
 
   if (!token) {
-    return <ErrorCard message="Enlace de invitación inválido o incompleto." />
+    return <ErrorCard message="Invalid or incomplete invitation link." />
   }
 
   const adminSupabase = createAdminClient()
   const { data: invitation, error } = await getInvitationByToken(adminSupabase, token)
 
   if (error || !invitation) {
-    return <ErrorCard message="La invitación no existe o ya no es válida." />
+    return <ErrorCard message="This invitation does not exist or is no longer valid." />
   }
 
   if (invitation.accepted_at) {
-    return <ErrorCard message="Esta invitación ya fue aceptada anteriormente." />
+    return <ErrorCard message="This invitation has already been accepted." />
   }
 
   if (new Date(invitation.expires_at) < new Date()) {
-    return <ErrorCard message="Esta invitación ha expirado. Pide al administrador del proyecto que te envíe una nueva." />
+    return <ErrorCard message="This invitation has expired. Ask the project administrator to send a new one." />
   }
 
-  const projectName = invitation.project?.name ?? 'un proyecto'
-  const inviterName = invitation.inviter?.full_name ?? 'Alguien'
+  const projectName = invitation.project?.name ?? 'a project'
+  const inviterName = invitation.inviter?.full_name ?? 'Someone'
 
-  // Check if user is authenticated
   const ssrSupabase = await createClient()
   const { data: { user } } = await ssrSupabase.auth.getUser()
 
   if (user) {
-    if (!user.email) return <ErrorCard message="Tu cuenta no tiene email asociado. Contacta al administrador." />
-    // User is logged in → accept and redirect
+    if (!user.email) return <ErrorCard message="Your account has no associated email. Contact the administrator." />
     const result = await acceptInvitation(adminSupabase, token, user.id, user.email)
 
     if (result.error) {
@@ -51,7 +49,6 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
     redirect(`/project/${result.data!.projectId}/board`)
   }
 
-  // Not logged in → show invitation details
   const registerUrl = `/register?inviteToken=${token}&email=${encodeURIComponent(invitation.email)}`
   const loginUrl = `/login?inviteToken=${token}&email=${encodeURIComponent(invitation.email)}`
 
@@ -66,14 +63,14 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
             <line x1="22" y1="11" x2="16" y2="11" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-gray-900">Tienes una invitación</h2>
+        <h2 className="text-xl font-semibold text-gray-900">You have an invitation</h2>
       </div>
 
       <div className="bg-gray-50 rounded-xl p-4 mb-6 text-sm text-gray-700 space-y-1">
-        <p><span className="text-gray-400">De:</span> <strong>{inviterName}</strong></p>
-        <p><span className="text-gray-400">Proyecto:</span> <strong>{projectName}</strong></p>
-        <p><span className="text-gray-400">Para:</span> <strong>{invitation.email}</strong></p>
-        <p><span className="text-gray-400">Rol:</span> <strong className="capitalize">{invitation.role}</strong></p>
+        <p><span className="text-gray-400">From:</span> <strong>{inviterName}</strong></p>
+        <p><span className="text-gray-400">Project:</span> <strong>{projectName}</strong></p>
+        <p><span className="text-gray-400">To:</span> <strong>{invitation.email}</strong></p>
+        <p><span className="text-gray-400">Role:</span> <strong className="capitalize">{invitation.role}</strong></p>
       </div>
 
       <div className="space-y-3">
@@ -82,20 +79,20 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
           className="block w-full text-center py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg
                      hover:bg-blue-700 transition-colors"
         >
-          Crear cuenta y aceptar
+          Create account and accept
         </Link>
         <Link
           href={loginUrl}
           className="block w-full text-center py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg
                      hover:bg-gray-50 transition-colors"
         >
-          Ya tengo cuenta — Iniciar sesión
+          I already have an account — Sign in
         </Link>
       </div>
 
       <p className="mt-5 text-center text-xs text-gray-400">
-        La invitación fue enviada a <strong>{invitation.email}</strong>.<br />
-        Debes usar esa dirección de email para acceder.
+        This invitation was sent to <strong>{invitation.email}</strong>.<br />
+        You must use that email address to access.
       </p>
     </div>
   )
@@ -111,13 +108,13 @@ function ErrorCard({ message }: { message: string }) {
           <line x1="9" y1="9" x2="15" y2="15" />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold text-gray-900 mb-2">Invitación no válida</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-2">Invalid invitation</h2>
       <p className="text-sm text-gray-500 mb-6">{message}</p>
       <Link
         href="/login"
         className="inline-block px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
       >
-        Ir al inicio de sesión
+        Go to sign in
       </Link>
     </div>
   )
