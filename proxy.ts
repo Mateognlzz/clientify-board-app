@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password')
-  const isPublicAction = pathname.startsWith('/admin-action')
+  const isPublicAction = pathname.startsWith('/admin-action') || pathname.startsWith('/auth/callback')
   const isResetPassword = pathname.startsWith('/reset-password')
 
   if (!user && !isAuthRoute && !isPublicAction && !isResetPassword && pathname !== '/') {
