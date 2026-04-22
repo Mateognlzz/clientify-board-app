@@ -106,7 +106,7 @@ export async function invitePlatformUserAction(email: string): Promise<ServiceRe
   void sendPlatformInviteNotification({
     toEmail: email,
     invitedByName: adminProfile?.full_name ?? 'An administrator',
-    inviteUrl: `${APP_URL}/accept-platform-invite?token=${result.data!.token}`,
+    inviteUrl: `${APP_URL}/register?platformInviteToken=${result.data!.token}&email=${encodeURIComponent(email)}`,
   })
 
   revalidatePath('/admin')

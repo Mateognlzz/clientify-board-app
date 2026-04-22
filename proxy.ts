@@ -65,30 +65,39 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Check profile status for authenticated users on regular routes
-  if (user && !isAuthRoute && !isStatusGate && !isPublicAction) {
+  // Check profile status for authenticated users
+  if (user && !isAuthRoute && !isPublicAction) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('status')
       .eq('id', user.id)
       .single()
 
-    if (profile?.status === 'pending') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/pending-approval'
-      return NextResponse.redirect(url)
-    }
+    if (isStatusGate) {
+      // If user is on a status gate page but their status is now active, let them in
+      if (profile?.status === 'active') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+    } else {
+      if (profile?.status === 'pending') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/pending-approval'
+        return NextResponse.redirect(url)
+      }
 
-    if (profile?.status === 'suspended') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/suspended'
-      return NextResponse.redirect(url)
-    }
+      if (profile?.status === 'suspended') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/suspended'
+        return NextResponse.redirect(url)
+      }
 
-    if (profile?.status === 'rejected') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/rejected'
-      return NextResponse.redirect(url)
+      if (profile?.status === 'rejected') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/rejected'
+        return NextResponse.redirect(url)
+      }
     }
   }
 

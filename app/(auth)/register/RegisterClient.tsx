@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isValidEmail, isNonEmptyString, isValidPassword } from '@/lib/utils/validation'
-import { notifyAdminOfRegistrationAction } from './registration-actions'
+import { registerStandardAction, registerWithPlatformInviteAction } from './registration-actions'
 
 interface Props {
   inviteToken?: string
@@ -20,6 +20,7 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [pendingApproval, setPendingApproval] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -41,38 +42,60 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
     setLoading(true)
 
     const supabase = createClient()
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName.trim() },
-      },
-    })
 
-    if (signUpError) {
-      setError(translateAuthError(signUpError.message))
+    try {
+      // Platform invite: create user server-side (email pre-confirmed) then sign in directly
+      if (platformInviteToken) {
+        const result = await registerWithPlatformInviteAction(email, password, fullName.trim(), platformInviteToken)
+        if (result.error) {
+          setError(result.error)
+          setLoading(false)
+          return
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) {
+          setError('Account created. Please sign in.')
+          setLoading(false)
+          router.push('/login')
+          return
+        }
+        window.location.href = '/dashboard'
+        return
+      }
+
+      // Standard registration
+      const result = await registerStandardAction(email, password, fullName.trim())
+      if (result.error) {
+        setError(result.error)
+        setLoading(false)
+        return
+      }
+
+      setPendingApproval(true)
       setLoading(false)
-      return
+      void supabase.auth.signInWithPassword({ email, password })
+    } catch {
+      setError('Error creating account. Please try again.')
+      setLoading(false)
     }
+  }
 
-    // Notify admins (sets status=pending if admin emails configured and no invite bypasses it)
-    if (signUpData.user) {
-      void notifyAdminOfRegistrationAction(
-        signUpData.user.id,
-        fullName.trim(),
-        email,
-        !!(inviteToken || platformInviteToken)
-      )
-    }
-
-    if (platformInviteToken) {
-      router.push(`/accept-platform-invite?token=${platformInviteToken}`)
-    } else if (inviteToken) {
-      router.push(`/accept-invite?token=${inviteToken}`)
-    } else {
-      router.push('/dashboard')
-    }
-    router.refresh()
+  if (pendingApproval) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-yellow-50 mb-4">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Account pending approval</h2>
+        <p className="text-sm text-gray-500 max-w-sm mx-auto">
+          Your account is waiting for administrator approval. You will receive an email once your access has been granted.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -175,17 +198,4 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
       </p>
     </div>
   )
-}
-
-function translateAuthError(message: string): string {
-  if (message.includes('User already registered')) {
-    return 'An account with this email already exists. Try signing in.'
-  }
-  if (message.includes('Password should be at least')) {
-    return 'Password must be at least 6 characters.'
-  }
-  if (message.includes('Unable to validate email')) {
-    return 'The email address is not valid.'
-  }
-  return 'Error creating account. Please try again.'
 }
