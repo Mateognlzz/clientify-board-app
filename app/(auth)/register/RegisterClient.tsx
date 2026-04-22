@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isValidEmail, isNonEmptyString, isValidPassword } from '@/lib/utils/validation'
-import { registerStandardAction, registerWithPlatformInviteAction } from './registration-actions'
+import { registerStandardAction, validatePlatformInviteAction } from './registration-actions'
 
 interface Props {
   inviteToken?: string
@@ -44,22 +44,31 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
     const supabase = createClient()
 
     try {
-      // Platform invite: create user server-side (email pre-confirmed) then sign in directly
+      // Platform invite: validate token server-side, then register via Supabase (sends confirmation email)
       if (platformInviteToken) {
-        const result = await registerWithPlatformInviteAction(email, password, fullName.trim(), platformInviteToken)
+        const result = await validatePlatformInviteAction(email, platformInviteToken)
         if (result.error) {
           setError(result.error)
           setLoading(false)
           return
         }
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) {
-          setError('Account created. Please sign in.')
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName.trim() },
+            emailRedirectTo: `${window.location.origin}/login`,
+          },
+        })
+        if (signUpError) {
+          setError(signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')
+            ? 'An account with this email already exists.'
+            : 'Error creating account. Please try again.')
           setLoading(false)
-          router.push('/login')
           return
         }
-        window.location.href = '/dashboard'
+        setEmailSent(true)
+        setLoading(false)
         return
       }
 

@@ -75,15 +75,12 @@ export async function registerStandardAction(
   return { error: null }
 }
 
-export async function registerWithPlatformInviteAction(
+export async function validatePlatformInviteAction(
   email: string,
-  password: string,
-  fullName: string,
   token: string
 ): Promise<{ error: string | null }> {
   const supabase = createAdminClient()
 
-  // Validate the invitation
   const { data: inv, error: invError } = await supabase
     .from('platform_invitations')
     .select('*')
@@ -97,38 +94,10 @@ export async function registerWithPlatformInviteAction(
     return { error: `This invitation was sent to ${inv.email}. Please use that email address.` }
   }
 
-  // Create user with email already confirmed — bypasses Supabase email confirmation
-  const { data: userData, error: createError } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName.trim() },
-  })
-
-  let userId: string | null = userData?.user?.id ?? null
-
-  if (createError) {
-    if (!createError.message.toLowerCase().includes('already been registered') &&
-        !createError.message.toLowerCase().includes('already registered')) {
-      return { error: 'Error creating account. Please try again.' }
-    }
-    // User already exists — look up their profile
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
-    userId = existing?.id ?? null
-  }
-
-  if (!userId) return { error: 'Could not create account.' }
-
-  // Set active + mark invitation accepted in parallel
-  await Promise.all([
-    supabase.from('profiles').update({ status: 'active' }).eq('id', userId),
-    supabase.from('platform_invitations').update({ accepted_at: new Date().toISOString() }).eq('id', inv.id),
-    supabase.auth.admin.updateUserById(userId, { app_metadata: { status: 'active' } }),
-  ])
+  await supabase
+    .from('platform_invitations')
+    .update({ accepted_at: new Date().toISOString() })
+    .eq('id', inv.id)
 
   return { error: null }
 }
