@@ -5,19 +5,22 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isValidEmail, isNonEmptyString, isValidPassword } from '@/lib/utils/validation'
+import { registerStandardAction, registerWithPlatformInviteAction } from './registration-actions'
 
 interface Props {
   inviteToken?: string
   defaultEmail?: string
+  platformInviteToken?: string
 }
 
-export function RegisterClient({ inviteToken, defaultEmail }: Props) {
+export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken }: Props) {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState(defaultEmail ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [pendingApproval, setPendingApproval] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -39,26 +42,67 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
     setLoading(true)
 
     const supabase = createClient()
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName.trim() },
-      },
-    })
 
-    if (signUpError) {
-      setError(translateAuthError(signUpError.message))
+    try {
+      // Platform invite: create user server-side (email pre-confirmed) then sign in directly
+      if (platformInviteToken) {
+        const result = await registerWithPlatformInviteAction(email, password, fullName.trim(), platformInviteToken)
+        if (result.error) {
+          setError(result.error)
+          setLoading(false)
+          return
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) {
+          setError('Account created. Please sign in.')
+          setLoading(false)
+          router.push('/login')
+          return
+        }
+        window.location.href = '/dashboard'
+        return
+      }
+
+      // Standard registration
+      const result = await registerStandardAction(email, password, fullName.trim(), !!inviteToken)
+      if (result.error) {
+        setError(result.error)
+        setLoading(false)
+        return
+      }
+
+      if (inviteToken) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) { router.push('/login'); return }
+        window.location.href = `/accept-invite?token=${inviteToken}`
+        return
+      }
+
+      setPendingApproval(true)
       setLoading(false)
-      return
+      void supabase.auth.signInWithPassword({ email, password })
+    } catch {
+      setError('Error creating account. Please try again.')
+      setLoading(false)
     }
+  }
 
-    if (inviteToken) {
-      router.push(`/accept-invite?token=${inviteToken}`)
-    } else {
-      router.push('/dashboard')
-    }
-    router.refresh()
+  if (pendingApproval) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-yellow-50 mb-4">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Account pending approval</h2>
+        <p className="text-sm text-gray-500 max-w-sm mx-auto">
+          Your account is waiting for administrator approval. You will receive an email once your access has been granted.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -66,11 +110,11 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
       <h2 className="text-xl font-semibold text-gray-900 mb-2">
         Create account
       </h2>
-      {inviteToken && (
+      {(inviteToken || platformInviteToken) && (
         <p className="text-sm text-blue-600 mb-5">Create your account to accept the invitation.</p>
       )}
 
-      <form onSubmit={handleSubmit} className={`space-y-4 ${!inviteToken ? 'mt-6' : ''}`} noValidate>
+      <form onSubmit={handleSubmit} className={`space-y-4 ${!(inviteToken || platformInviteToken) ? 'mt-6' : ''}`} noValidate>
         <div>
           <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
             Full name
@@ -147,7 +191,13 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
       <p className="mt-6 text-center text-sm text-gray-500">
         Already have an account?{' '}
         <Link
-          href={inviteToken ? `/login?inviteToken=${inviteToken}&email=${encodeURIComponent(email)}` : '/login'}
+          href={
+            inviteToken
+              ? `/login?inviteToken=${inviteToken}&email=${encodeURIComponent(email)}`
+              : platformInviteToken
+              ? `/login?platformInviteToken=${platformInviteToken}&email=${encodeURIComponent(email)}`
+              : '/login'
+          }
           className="text-blue-600 font-medium hover:underline"
         >
           Sign in
@@ -155,17 +205,4 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
       </p>
     </div>
   )
-}
-
-function translateAuthError(message: string): string {
-  if (message.includes('User already registered')) {
-    return 'An account with this email already exists. Try signing in.'
-  }
-  if (message.includes('Password should be at least')) {
-    return 'Password must be at least 6 characters.'
-  }
-  if (message.includes('Unable to validate email')) {
-    return 'The email address is not valid.'
-  }
-  return 'Error creating account. Please try again.'
 }

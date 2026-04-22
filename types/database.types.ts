@@ -25,6 +25,7 @@ export type Database = {
           email: string
           full_name: string | null
           avatar_url: string | null
+          status: string
           created_at: string
           updated_at: string
         }
@@ -33,6 +34,7 @@ export type Database = {
           email: string
           full_name?: string | null
           avatar_url?: string | null
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -41,6 +43,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           avatar_url?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -563,6 +566,70 @@ export type Database = {
           },
           {
             foreignKeyName: 'pending_invitations_invited_by_fkey'
+            columns: ['invited_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      admin_action_tokens: {
+        Row: {
+          id: string
+          token: string
+          action: string
+          target_user_id: string
+          created_at: string
+          expires_at: string
+          used_at: string | null
+        }
+        Insert: {
+          id?: string
+          token?: string
+          action: string
+          target_user_id: string
+          created_at?: string
+          expires_at?: string
+          used_at?: string | null
+        }
+        Update: {
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'admin_action_tokens_target_user_id_fkey'
+            columns: ['target_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      platform_invitations: {
+        Row: {
+          id: string
+          email: string
+          token: string
+          invited_by: string
+          created_at: string
+          expires_at: string
+          accepted_at: string | null
+        }
+        Insert: {
+          id?: string
+          email: string
+          token?: string
+          invited_by: string
+          created_at?: string
+          expires_at?: string
+          accepted_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'platform_invitations_invited_by_fkey'
             columns: ['invited_by']
             isOneToOne: false
             referencedRelation: 'profiles'

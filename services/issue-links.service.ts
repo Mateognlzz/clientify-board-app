@@ -12,10 +12,10 @@ export interface LinkedIssuePreview {
   status: string
   type: string
   priority: string
-  assignee: { full_name: string | null; avatar_url: string | null } | null
+  assignee: { full_name: string | null; avatar_url: string | null; status: string } | null
 }
 
-const ISSUE_FIELDS = 'id, key, title, status, type, priority, assignee:profiles!issues_assignee_id_fkey(full_name, avatar_url)'
+const ISSUE_FIELDS = 'id, key, title, status, type, priority, assignee:profiles!issues_assignee_id_fkey(full_name, avatar_url, status)'
 
 export async function getIssueLinks(
   supabase: Client,
@@ -40,7 +40,7 @@ export async function getIssueLinks(
     status: issue.status as string,
     type: issue.type as string,
     priority: issue.priority as string,
-    assignee: (issue.assignee as { full_name: string | null; avatar_url: string | null } | null) ?? null,
+    assignee: (issue.assignee as { full_name: string | null; avatar_url: string | null; status: string } | null) ?? null,
   })
 
   const results: LinkedIssuePreview[] = []

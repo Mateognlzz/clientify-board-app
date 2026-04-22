@@ -12,7 +12,7 @@ type RawMember = {
   role: string
   invited_by: string | null
   created_at: string
-  profile: { id: string; email: string; full_name: string | null; avatar_url: string | null } | null
+  profile: { id: string; email: string; full_name: string | null; avatar_url: string | null; status: string } | null
 }
 
 export async function getProjectMembersWithProfile(
@@ -21,7 +21,7 @@ export async function getProjectMembersWithProfile(
 ): Promise<ServiceResult<ProjectMemberWithProfile[]>> {
   const { data, error } = await supabase
     .from('project_members')
-    .select('*, profile:profiles!project_members_user_id_fkey(id, email, full_name, avatar_url)')
+    .select('*, profile:profiles!project_members_user_id_fkey(id, email, full_name, avatar_url, status)')
     .eq('project_id', projectId)
     .order('created_at', { ascending: true })
 
@@ -34,7 +34,7 @@ export async function getProjectMembersWithProfile(
     role: m.role as MemberRole,
     invited_by: m.invited_by,
     created_at: m.created_at,
-    profile: m.profile ?? { id: m.user_id, email: '', full_name: null, avatar_url: null },
+    profile: m.profile ?? { id: m.user_id, email: '', full_name: null, avatar_url: null, status: 'active' },
   }))
 
   return { data: members, error: null }
@@ -217,10 +217,17 @@ export async function acceptInvitation(
     if (insertError) return { data: null, error: 'Error joining project.' }
   }
 
-  await supabase
-    .from('pending_invitations')
-    .update({ accepted_at: new Date().toISOString() })
-    .eq('id', inv.id)
+  await Promise.all([
+    supabase
+      .from('pending_invitations')
+      .update({ accepted_at: new Date().toISOString() })
+      .eq('id', inv.id),
+    // Invited users bypass pending-approval flow
+    supabase
+      .from('profiles')
+      .update({ status: 'active' })
+      .eq('id', userId),
+  ])
 
   return { data: { projectId: inv.project_id }, error: null }
 }

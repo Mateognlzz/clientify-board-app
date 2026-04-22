@@ -21,6 +21,7 @@ export async function sendAssignmentNotification({
   assignedByName,
   issueKey,
   issueTitle,
+  issueId,
   projectId,
 }: {
   toEmail: string
@@ -28,6 +29,7 @@ export async function sendAssignmentNotification({
   assignedByName: string
   issueKey: string
   issueTitle: string
+  issueId: string
   projectId: string
 }) {
   await sendEvent({
@@ -37,6 +39,7 @@ export async function sendAssignmentNotification({
     assignedByName,
     issueKey,
     issueTitle,
+    issueUrl: `${APP_URL}/project/${projectId}/issue/${issueId}`,
     projectUrl: `${APP_URL}/project/${projectId}/list`,
     projectId,
   })
@@ -48,6 +51,7 @@ export async function sendStatusChangeNotification({
   changedByName,
   issueKey,
   issueTitle,
+  issueId,
   newStatus,
   projectId,
 }: {
@@ -56,6 +60,7 @@ export async function sendStatusChangeNotification({
   changedByName: string
   issueKey: string
   issueTitle: string
+  issueId: string
   newStatus: string
   projectId: string
 }) {
@@ -67,6 +72,7 @@ export async function sendStatusChangeNotification({
     issueKey,
     issueTitle,
     newStatus,
+    issueUrl: `${APP_URL}/project/${projectId}/issue/${issueId}`,
     projectUrl: `${APP_URL}/project/${projectId}/list`,
     projectId,
   })
@@ -116,12 +122,82 @@ export async function sendPendingInviteEmail({
   })
 }
 
+export async function sendUserRegisteredNotification({
+  toEmail,
+  newUserName,
+  newUserEmail,
+  approveUrl,
+  rejectUrl,
+}: {
+  toEmail: string
+  newUserName: string
+  newUserEmail: string
+  approveUrl: string
+  rejectUrl: string
+}) {
+  await sendEvent({
+    event: 'user.registered',
+    toEmail,
+    newUserName,
+    newUserEmail,
+    approveUrl,
+    rejectUrl,
+  })
+}
+
+export async function sendUserApprovedNotification({
+  toEmail,
+  toName,
+}: {
+  toEmail: string
+  toName: string
+}) {
+  await sendEvent({
+    event: 'user.approved',
+    toEmail,
+    toName,
+    loginUrl: `${APP_URL}/login`,
+  })
+}
+
+export async function sendUserRejectedNotification({
+  toEmail,
+  toName,
+}: {
+  toEmail: string
+  toName: string
+}) {
+  await sendEvent({
+    event: 'user.rejected',
+    toEmail,
+    toName,
+  })
+}
+
+export async function sendPlatformInviteNotification({
+  toEmail,
+  invitedByName,
+  inviteUrl,
+}: {
+  toEmail: string
+  invitedByName: string
+  inviteUrl: string
+}) {
+  await sendEvent({
+    event: 'platform.invite',
+    toEmail,
+    invitedByName,
+    inviteUrl,
+  })
+}
+
 export async function sendMentionNotification({
   toEmail,
   toName,
   mentionedByName,
   issueKey,
   issueTitle,
+  issueId,
   projectId,
   commentSnippet,
 }: {
@@ -130,6 +206,7 @@ export async function sendMentionNotification({
   mentionedByName: string
   issueKey: string
   issueTitle: string
+  issueId: string
   projectId: string
   commentSnippet: string
 }) {
@@ -141,6 +218,7 @@ export async function sendMentionNotification({
     issueKey,
     issueTitle,
     commentSnippet,
+    issueUrl: `${APP_URL}/project/${projectId}/issue/${issueId}`,
     projectUrl: `${APP_URL}/project/${projectId}/list`,
     projectId,
   })
