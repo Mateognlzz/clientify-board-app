@@ -20,7 +20,7 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [pendingApproval, setPendingApproval] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -63,42 +63,56 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
         return
       }
 
-      // Standard registration — skip pending, go directly to dashboard
-      const result = await registerStandardAction(email, password, fullName.trim(), true)
-      if (result.error) {
-        setError(result.error)
-        setLoading(false)
-        return
-      }
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInError) { router.push('/login'); return }
-
+      // Project invite — use admin API, skip email confirmation
       if (inviteToken) {
+        const result = await registerStandardAction(email, password, fullName.trim(), true)
+        if (result.error) { setError(result.error); setLoading(false); return }
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) { router.push('/login'); return }
         window.location.href = `/accept-invite?token=${inviteToken}`
         return
       }
 
-      window.location.href = '/dashboard'
+      // Standard registration — Supabase sends confirmation email
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName.trim() },
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      })
+
+      if (signUpError) {
+        setError(signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')
+          ? 'An account with this email already exists.'
+          : signUpError.message.includes('rate limit')
+          ? 'Too many requests. Please try again in a few minutes.'
+          : 'Error creating account. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      setEmailSent(true)
+      setLoading(false)
     } catch {
       setError('Error creating account. Please try again.')
       setLoading(false)
     }
   }
 
-  if (pendingApproval) {
+  if (emailSent) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-yellow-50 mb-4">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 mb-4">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Account pending approval</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Check your email</h2>
         <p className="text-sm text-gray-500 max-w-sm mx-auto">
-          Your account is waiting for administrator approval. You will receive an email once your access has been granted.
+          We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and sign in.
         </p>
       </div>
     )
