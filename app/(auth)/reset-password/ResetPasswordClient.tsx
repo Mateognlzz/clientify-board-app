@@ -15,11 +15,20 @@ export function ResetPasswordClient() {
 
   useEffect(() => {
     const supabase = createClient()
-    // Supabase fires PASSWORD_RECOVERY when the reset link is opened
+    const code = new URLSearchParams(window.location.search).get('code')
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) setError('Invalid or expired reset link. Please request a new one.')
+        else setReady(true)
+      })
+      return
+    }
+
+    // Fallback for hash-based flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
-    // Also check if there's already a session (user already exchanged the code)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true)
     })
@@ -56,7 +65,10 @@ export function ResetPasswordClient() {
   if (!ready) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-        <p className="text-sm text-gray-500">Validating reset link...</p>
+        {error
+          ? <p className="text-sm text-red-600">{error}</p>
+          : <p className="text-sm text-gray-500">Validating reset link...</p>
+        }
       </div>
     )
   }
