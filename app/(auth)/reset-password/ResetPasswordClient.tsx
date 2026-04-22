@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isValidPassword } from '@/lib/utils/validation'
 
@@ -109,9 +108,13 @@ export function ResetPasswordClient() {
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
-        <Link href="/login" className="text-blue-600 font-medium hover:underline">
+        <button
+          type="button"
+          onClick={async () => { await createClient().auth.signOut(); router.push('/login') }}
+          className="text-blue-600 font-medium hover:underline"
+        >
           Back to sign in
-        </Link>
+        </button>
       </p>
     </div>
   )
