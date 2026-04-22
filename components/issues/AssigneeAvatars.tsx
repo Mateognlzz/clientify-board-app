@@ -51,6 +51,7 @@ export function AssigneeAvatars({
       {/* Visible member avatars */}
       {visible.map((m, i) => {
         const isActive = activeIds.includes(m.user_id)
+        const inactive = (m.profile?.status ?? 'active') !== 'active'
         const initials = m.profile?.full_name
           ? m.profile.full_name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
           : '?'
@@ -61,7 +62,8 @@ export function AssigneeAvatars({
             onClick={() => onToggle(m.user_id)}
             title={m.profile?.full_name ?? m.user_id}
             className={cn(
-              'relative h-7 w-7 rounded-full border-2 bg-blue-500 flex items-center justify-center shrink-0 transition-all',
+              'relative h-7 w-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+              inactive ? 'bg-gray-400' : 'bg-blue-500',
               isActive
                 ? 'border-blue-500 ring-2 ring-blue-400 ring-offset-1'
                 : 'border-white hover:border-blue-300'
@@ -69,7 +71,7 @@ export function AssigneeAvatars({
             style={{ marginLeft: '-6px', zIndex: isActive ? MAX_AVATAR_VISIBLE + 1 : MAX_AVATAR_VISIBLE - i }}
           >
             {m.profile?.avatar_url ? (
-              <img src={m.profile.avatar_url} className="h-full w-full rounded-full object-cover" alt="" />
+              <img src={m.profile.avatar_url} className={`h-full w-full rounded-full object-cover ${inactive ? 'grayscale opacity-60' : ''}`} alt="" />
             ) : (
               <span className="text-[10px] font-bold text-white">{initials}</span>
             )}
@@ -120,6 +122,7 @@ export function AssigneeAvatars({
             </button>
             {members.map((m) => {
               const isActive = activeIds.includes(m.user_id)
+              const inactive = (m.profile?.status ?? 'active') !== 'active'
               const initials = m.profile?.full_name
                 ? m.profile.full_name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
                 : '?'
@@ -140,13 +143,13 @@ export function AssigneeAvatars({
                     {isActive && <span className="text-white text-[9px] font-bold">✓</span>}
                   </span>
                   {m.profile?.avatar_url ? (
-                    <img src={m.profile.avatar_url} className="h-5 w-5 rounded-full object-cover shrink-0" alt="" />
+                    <img src={m.profile.avatar_url} className={`h-5 w-5 rounded-full object-cover shrink-0 ${inactive ? 'grayscale opacity-60' : ''}`} alt="" />
                   ) : (
-                    <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                    <div className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${inactive ? 'bg-gray-400' : 'bg-blue-500'}`}>
                       <span className="text-[8px] font-bold text-white">{initials}</span>
                     </div>
                   )}
-                  <span className="truncate">{m.profile?.full_name ?? m.user_id}</span>
+                  <span className={`truncate ${inactive ? 'text-gray-400' : ''}`}>{m.profile?.full_name ?? m.user_id}</span>
                 </button>
               )
             })}

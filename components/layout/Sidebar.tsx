@@ -14,6 +14,7 @@ import {
   Plus,
   Users,
   MoreHorizontal,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { signOutAction } from '@/app/auth-actions'
@@ -30,9 +31,10 @@ interface SidebarProject {
 interface SidebarProps {
   projects: SidebarProject[]
   ownerProjectIds: string[]
+  isSuperAdmin?: boolean
 }
 
-export function Sidebar({ projects: initialProjects, ownerProjectIds }: SidebarProps) {
+export function Sidebar({ projects: initialProjects, ownerProjectIds, isSuperAdmin }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [projects, setProjects] = useState(initialProjects)
   const [createOpen, setCreateOpen] = useState(false)
@@ -149,6 +151,15 @@ export function Sidebar({ projects: initialProjects, ownerProjectIds }: SidebarP
               collapsed={collapsed}
               active={pathname === '/team'}
             />
+            {isSuperAdmin && (
+              <NavItem
+                href="/admin"
+                icon={<Shield size={16} />}
+                label="Admin"
+                collapsed={collapsed}
+                active={pathname.startsWith('/admin')}
+              />
+            )}
           </div>
         </nav>
 

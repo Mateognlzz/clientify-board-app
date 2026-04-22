@@ -24,6 +24,7 @@ export interface ProjectMemberPreview {
     id: string
     full_name: string | null
     avatar_url: string | null
+    status: string
   } | null
 }
 
@@ -59,7 +60,7 @@ export async function getProjects(
   // 2. Miembros con perfil — usamos FK hint explícito para evitar ambigüedad
   const { data: membersData, error: membersError } = await supabase
     .from('project_members')
-    .select('id, project_id, user_id, role, profile:profiles!project_members_user_id_fkey(id, full_name, avatar_url)')
+    .select('id, project_id, user_id, role, profile:profiles!project_members_user_id_fkey(id, full_name, avatar_url, status)')
     .in('project_id', projectIds)
 
   if (membersError) {
@@ -74,7 +75,7 @@ export async function getProjects(
     .neq('status', 'done')
 
   // Agrupar miembros por proyecto
-  type RawMember = { id: string; project_id: string; user_id: string; role: string; profile: { id: string; full_name: string | null; avatar_url: string | null } | null }
+  type RawMember = { id: string; project_id: string; user_id: string; role: string; profile: { id: string; full_name: string | null; avatar_url: string | null; status: string } | null }
 
   const membersByProject = (membersData ?? []).reduce<Record<string, ProjectMemberPreview[]>>(
     (acc, m) => {
@@ -119,14 +120,14 @@ export async function getProjectMembers(
 ): Promise<ServiceResult<ProjectMemberPreview[]>> {
   const { data, error } = await supabase
     .from('project_members')
-    .select('id, user_id, role, profile:profiles!project_members_user_id_fkey(id, full_name, avatar_url)')
+    .select('id, user_id, role, profile:profiles!project_members_user_id_fkey(id, full_name, avatar_url, status)')
     .eq('project_id', projectId)
 
   if (error) {
     return { data: null, error: 'Error al cargar los miembros.' }
   }
 
-  type RawMember = { id: string; user_id: string; role: string; profile: { id: string; full_name: string | null; avatar_url: string | null } | null }
+  type RawMember = { id: string; user_id: string; role: string; profile: { id: string; full_name: string | null; avatar_url: string | null; status: string } | null }
 
   const members: ProjectMemberPreview[] = (data as unknown as RawMember[]).map((m) => ({
     id: m.id,

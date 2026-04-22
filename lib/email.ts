@@ -116,6 +116,75 @@ export async function sendPendingInviteEmail({
   })
 }
 
+export async function sendUserRegisteredNotification({
+  toEmail,
+  newUserName,
+  newUserEmail,
+  approveUrl,
+  rejectUrl,
+}: {
+  toEmail: string
+  newUserName: string
+  newUserEmail: string
+  approveUrl: string
+  rejectUrl: string
+}) {
+  await sendEvent({
+    event: 'user.registered',
+    toEmail,
+    newUserName,
+    newUserEmail,
+    approveUrl,
+    rejectUrl,
+  })
+}
+
+export async function sendUserApprovedNotification({
+  toEmail,
+  toName,
+}: {
+  toEmail: string
+  toName: string
+}) {
+  await sendEvent({
+    event: 'user.approved',
+    toEmail,
+    toName,
+    loginUrl: `${APP_URL}/login`,
+  })
+}
+
+export async function sendUserRejectedNotification({
+  toEmail,
+  toName,
+}: {
+  toEmail: string
+  toName: string
+}) {
+  await sendEvent({
+    event: 'user.rejected',
+    toEmail,
+    toName,
+  })
+}
+
+export async function sendPlatformInviteNotification({
+  toEmail,
+  invitedByName,
+  inviteUrl,
+}: {
+  toEmail: string
+  invitedByName: string
+  inviteUrl: string
+}) {
+  await sendEvent({
+    event: 'platform.invite',
+    toEmail,
+    invitedByName,
+    inviteUrl,
+  })
+}
+
 export async function sendMentionNotification({
   toEmail,
   toName,

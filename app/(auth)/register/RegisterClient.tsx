@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isValidEmail, isNonEmptyString, isValidPassword } from '@/lib/utils/validation'
+import { notifyAdminOfRegistrationAction } from './registration-actions'
 
 interface Props {
   inviteToken?: string
   defaultEmail?: string
+  platformInviteToken?: string
 }
 
-export function RegisterClient({ inviteToken, defaultEmail }: Props) {
+export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken }: Props) {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState(defaultEmail ?? '')
@@ -39,7 +41,7 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
     setLoading(true)
 
     const supabase = createClient()
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -53,7 +55,19 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
       return
     }
 
-    if (inviteToken) {
+    // Notify admins (sets status=pending if admin emails configured and no invite bypasses it)
+    if (signUpData.user) {
+      void notifyAdminOfRegistrationAction(
+        signUpData.user.id,
+        fullName.trim(),
+        email,
+        !!(inviteToken || platformInviteToken)
+      )
+    }
+
+    if (platformInviteToken) {
+      router.push(`/accept-platform-invite?token=${platformInviteToken}`)
+    } else if (inviteToken) {
       router.push(`/accept-invite?token=${inviteToken}`)
     } else {
       router.push('/dashboard')
@@ -66,11 +80,11 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
       <h2 className="text-xl font-semibold text-gray-900 mb-2">
         Create account
       </h2>
-      {inviteToken && (
+      {(inviteToken || platformInviteToken) && (
         <p className="text-sm text-blue-600 mb-5">Create your account to accept the invitation.</p>
       )}
 
-      <form onSubmit={handleSubmit} className={`space-y-4 ${!inviteToken ? 'mt-6' : ''}`} noValidate>
+      <form onSubmit={handleSubmit} className={`space-y-4 ${!(inviteToken || platformInviteToken) ? 'mt-6' : ''}`} noValidate>
         <div>
           <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
             Full name
@@ -147,7 +161,13 @@ export function RegisterClient({ inviteToken, defaultEmail }: Props) {
       <p className="mt-6 text-center text-sm text-gray-500">
         Already have an account?{' '}
         <Link
-          href={inviteToken ? `/login?inviteToken=${inviteToken}&email=${encodeURIComponent(email)}` : '/login'}
+          href={
+            inviteToken
+              ? `/login?inviteToken=${inviteToken}&email=${encodeURIComponent(email)}`
+              : platformInviteToken
+              ? `/login?platformInviteToken=${platformInviteToken}&email=${encodeURIComponent(email)}`
+              : '/login'
+          }
           className="text-blue-600 font-medium hover:underline"
         >
           Sign in
