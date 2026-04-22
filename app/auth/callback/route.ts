@@ -12,7 +12,9 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(new URL(next, url.origin))
     }
+    // Server-side exchange failed (PKCE verifier not available) — pass code to client
+    return NextResponse.redirect(new URL(`${next}?code=${code}`, url.origin))
   }
 
-  return NextResponse.redirect(new URL('/login?error=invalid_link', url.origin))
+  return NextResponse.redirect(new URL('/login', url.origin))
 }

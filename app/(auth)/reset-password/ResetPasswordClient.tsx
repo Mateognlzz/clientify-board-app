@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isValidPassword } from '@/lib/utils/validation'
 
@@ -11,15 +12,6 @@ export function ResetPasswordClient() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true)
-      else setError('Invalid or expired reset link. Please request a new one.')
-    })
-  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -39,24 +31,13 @@ export function ResetPasswordClient() {
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError('Error updating password. Please try again or request a new reset link.')
+      setError('The reset link has expired. Please request a new one.')
       setLoading(false)
       return
     }
 
     await supabase.auth.signOut()
     router.push('/login')
-  }
-
-  if (!ready) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-        {error
-          ? <p className="text-sm text-red-600">{error}</p>
-          : <p className="text-sm text-gray-500">Validating reset link...</p>
-        }
-      </div>
-    )
   }
 
   return (
@@ -118,6 +99,12 @@ export function ResetPasswordClient() {
           {loading ? 'Saving...' : 'Save new password'}
         </button>
       </form>
+
+      <p className="mt-6 text-center text-sm text-gray-500">
+        <Link href="/login" className="text-blue-600 font-medium hover:underline">
+          Back to sign in
+        </Link>
+      </p>
     </div>
   )
 }
