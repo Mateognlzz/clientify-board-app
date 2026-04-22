@@ -28,6 +28,14 @@ export function ResetPasswordClient() {
 
     setLoading(true)
     const supabase = createClient()
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setError('The reset link has expired. Please request a new one.')
+      setLoading(false)
+      return
+    }
+
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
