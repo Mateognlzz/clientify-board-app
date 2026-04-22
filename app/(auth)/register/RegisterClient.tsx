@@ -63,24 +63,23 @@ export function RegisterClient({ inviteToken, defaultEmail, platformInviteToken 
         return
       }
 
-      // Standard registration
-      const result = await registerStandardAction(email, password, fullName.trim(), !!inviteToken)
+      // Standard registration — skip pending, go directly to dashboard
+      const result = await registerStandardAction(email, password, fullName.trim(), true)
       if (result.error) {
         setError(result.error)
         setLoading(false)
         return
       }
 
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) { router.push('/login'); return }
+
       if (inviteToken) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) { router.push('/login'); return }
         window.location.href = `/accept-invite?token=${inviteToken}`
         return
       }
 
-      setPendingApproval(true)
-      setLoading(false)
-      void supabase.auth.signInWithPassword({ email, password })
+      window.location.href = '/dashboard'
     } catch {
       setError('Error creating account. Please try again.')
       setLoading(false)
