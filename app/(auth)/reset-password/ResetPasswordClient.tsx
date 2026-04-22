@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { isValidPassword } from '@/lib/utils/validation'
@@ -11,6 +11,35 @@ export function ResetPasswordClient() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    const params = new URLSearchParams(hash)
+
+    const errorCode = params.get('error_code')
+    if (errorCode) {
+      setError('Reset link is invalid or has expired. Please request a new one.')
+      return
+    }
+
+    const accessToken = params.get('access_token')
+    const refreshToken = params.get('refresh_token') ?? ''
+    const type = params.get('type')
+
+    if (!accessToken || type !== 'recovery') {
+      setError('Invalid reset link. Please request a new one.')
+      return
+    }
+
+    const supabase = createClient()
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ error: sessionError }) => {
+        if (sessionError) setError('Reset link is invalid or has expired. Please request a new one.')
+        else setReady(true)
+      })
+      .catch(() => setError('Reset link is invalid or has expired. Please request a new one.'))
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,24 +56,27 @@ export function ResetPasswordClient() {
 
     setLoading(true)
     const supabase = createClient()
-
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      setError('The reset link has expired. Please request a new one.')
-      setLoading(false)
-      return
-    }
-
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError('The reset link has expired. Please request a new one.')
+      setError('Error updating password. Please request a new reset link.')
       setLoading(false)
       return
     }
 
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  if (!ready) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+        {error
+          ? <p className="text-sm text-red-600">{error}</p>
+          : <p className="text-sm text-gray-500">Validating reset link...</p>
+        }
+      </div>
+    )
   }
 
   return (
