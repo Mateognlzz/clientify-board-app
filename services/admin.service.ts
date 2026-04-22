@@ -56,12 +56,12 @@ export async function listUsersByStatus(supabase: Client, status: string): Promi
 }
 
 export async function setUserStatus(supabase: Client, userId: string, status: string): Promise<ServiceResult<null>> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ status })
-    .eq('id', userId)
+  const [{ error: profileError }] = await Promise.all([
+    supabase.from('profiles').update({ status }).eq('id', userId),
+    supabase.auth.admin.updateUserById(userId, { app_metadata: { status } }),
+  ])
 
-  if (error) return { data: null, error: 'Error updating user status.' }
+  if (profileError) return { data: null, error: 'Error updating user status.' }
   return { data: null, error: null }
 }
 

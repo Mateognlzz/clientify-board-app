@@ -21,7 +21,10 @@ export async function notifyAdminOfRegistrationAction(
 
   const supabase = createAdminClient()
 
-  await supabase.from('profiles').update({ status: 'pending' }).eq('id', userId)
+  await Promise.all([
+    supabase.from('profiles').update({ status: 'pending' }).eq('id', userId),
+    supabase.auth.admin.updateUserById(userId, { app_metadata: { status: 'pending' } }),
+  ])
 
   const { approveToken, rejectToken } = await createAdminActionTokens(supabase, userId)
   if (!approveToken || !rejectToken) return
@@ -123,9 +126,8 @@ export async function registerWithPlatformInviteAction(
   // Set active + mark invitation accepted in parallel
   await Promise.all([
     supabase.from('profiles').update({ status: 'active' }).eq('id', userId),
-    supabase.from('platform_invitations')
-      .update({ accepted_at: new Date().toISOString() })
-      .eq('id', inv.id),
+    supabase.from('platform_invitations').update({ accepted_at: new Date().toISOString() }).eq('id', inv.id),
+    supabase.auth.admin.updateUserById(userId, { app_metadata: { status: 'active' } }),
   ])
 
   return { error: null }
