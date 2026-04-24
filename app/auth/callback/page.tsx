@@ -27,11 +27,7 @@ export default function AuthCallbackPage() {
       supabase.auth.exchangeCodeForSession(code)
         .then(({ error }) => {
           if (error) { router.replace('/login'); return }
-          if (inviteToken) {
-            router.replace(`/accept-invite?token=${inviteToken}`)
-          } else {
-            router.replace('/dashboard')
-          }
+          window.location.href = '/dashboard'
         })
         .catch(() => router.replace('/login'))
       return
